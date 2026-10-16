@@ -1,0 +1,13 @@
+# Ubuntu 22.04 / Python 3.10; ROS2 packages come from /opt/ros/humble.
+numpy==1.26.4
+scipy==1.15.3
+mujoco==3.3.2
+onnxruntime==1.19.2
+onnx==1.19.1
+ml-dtypes==0.5.1
+# PT export additionally needs CPU torch==2.5.1; see README.
+pyyaml==6.0.3
+transforms3d==0.4.2
+pytest>=8,<9
+pynput
+

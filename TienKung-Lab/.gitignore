@@ -1,0 +1,9 @@
+*.egg-info
+*.pyc
+.vscode
+outputs
+# logs/ 交由包根 .gitignore 按粒度控制：保留各 run 的 exported/ 与 params/，忽略 model_*.pt 与 tfevents
+run_bash.sh
+wandb
+MUJOCO_LOG.TXT
+.history

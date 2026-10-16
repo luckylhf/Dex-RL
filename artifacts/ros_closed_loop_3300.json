@@ -1,0 +1,39 @@
+{
+  "policy": "/home/longhongfeng/Desktop/Dex-RL/Dex-RL/TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/exported/policy.onnx",
+  "simulation_seconds": 15.002499999999158,
+  "min_pelvis_height": 0.9512595623737474,
+  "states": [
+    "WALKAMP",
+    "ZERO"
+  ],
+  "controller_error": null,
+  "validation_error": null,
+  "startup_feedback_age_seconds": {
+    "leg": 0.003165571,
+    "arm": 0.003165571,
+    "waist": 0.003165571,
+    "imu": 0.003165571
+  },
+  "initial_position": [
+    0.0,
+    0.0,
+    0.995
+  ],
+  "final_position": [
+    0.18311472880578397,
+    -0.012676974114213561,
+    0.993226812095422
+  ],
+  "forward_displacement": 0.18311472880578397,
+  "simulator_error": null,
+  "external_support": false,
+  "collapsed": false,
+  "ros_feedback_groups": [
+    "arm",
+    "imu",
+    "leg",
+    "waist"
+  ],
+  "received_motor_commands": 29,
+  "fault": null
+}

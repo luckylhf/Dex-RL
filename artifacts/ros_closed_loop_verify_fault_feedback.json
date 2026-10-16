@@ -1,0 +1,40 @@
+{
+  "policy": "configured default ONNX",
+  "simulation_seconds": 1.5324999999999784,
+  "min_pelvis_height": 0.952116882783788,
+  "states": [
+    "WALKAMP",
+    "ZERO"
+  ],
+  "controller_error": "imu sensor sample is older than 0.5 s",
+  "validation_error": null,
+  "startup_feedback_age_seconds": {
+    "leg": 0.002451697,
+    "arm": 0.002451697,
+    "waist": 0.002451697,
+    "imu": 0.002451697
+  },
+  "initial_position": [
+    0.0,
+    0.0,
+    0.995
+  ],
+  "final_position": [
+    0.30743298143953857,
+    -0.04338366660656192,
+    0.9790388329386985
+  ],
+  "forward_displacement": 0.30743298143953857,
+  "simulator_error": null,
+  "external_support": false,
+  "collapsed": false,
+  "ros_feedback_groups": [
+    "arm",
+    "imu",
+    "leg",
+    "waist"
+  ],
+  "received_motor_commands": 29,
+  "fault": "feedback",
+  "damping_stop_received": true
+}

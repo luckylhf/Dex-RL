@@ -1,0 +1,19 @@
+{
+  "configs": {
+    "walk": "ad50c5f6bd9503f1817c7ce3fda27266cae4af12383cb38b3c24ee95d8d12033",
+    "run": "ee36274e93f4503e6765d23ba38dcc42700fe980127ac5a9966eae37a4287e9c"
+  },
+  "model_hashes": {
+    "TienKung-Lab/legged_lab/assets/Tienkung_Dex/urdf/tiangong3.urdf": "1427b730f7d5abf921ff5d540ebcf16b661a628ab6be9015d4a26db09fe4e84a",
+    "TienKung-Lab/legged_lab/assets/Tienkung_Dex/urdf/tiangong3_locomotion.urdf": "e1f445a2de90ddcbe4dc6a99ab8e42064bc1d0dc13048988c1828d8d7f382bf9",
+    "xSIM_MUJOCO-main/resources/dex_v3/urdf/dex_v3.xml": "145214347323dc786c54e9c66e787df898b5c6a4c84bfcc334ceeea3771d2dd7",
+    "Deploy_Tienkung/policy/walk_amp/model/policy.onnx": "316f05036b92a3d05ebee79394028db6198af4c7992d0ff8574ea98ec3ad96fc",
+    "mass_kg": 65.81780300000001,
+    "nq": 30,
+    "nv": 29,
+    "active_policy_joints": 23,
+    "physical_timestep": 0.0025,
+    "walk_policy_period": 0.01,
+    "run_policy_period": 0.02
+  }
+}

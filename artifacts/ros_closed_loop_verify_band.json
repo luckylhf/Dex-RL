@@ -1,0 +1,39 @@
+{
+  "policy": "configured default ONNX",
+  "simulation_seconds": 15.002499999999158,
+  "min_pelvis_height": 0.9867993318845012,
+  "states": [
+    "WALKAMP",
+    "ZERO"
+  ],
+  "controller_error": null,
+  "validation_error": null,
+  "startup_feedback_age_seconds": {
+    "leg": 0.002943916,
+    "arm": 0.002943916,
+    "waist": 0.002943916,
+    "imu": 0.002943916
+  },
+  "initial_position": [
+    0.0,
+    0.0,
+    0.995
+  ],
+  "final_position": [
+    -0.022253119174585678,
+    -0.015175805646856486,
+    0.9948303320328458
+  ],
+  "forward_displacement": -0.022253119174585678,
+  "simulator_error": null,
+  "external_support": true,
+  "collapsed": false,
+  "ros_feedback_groups": [
+    "arm",
+    "imu",
+    "leg",
+    "waist"
+  ],
+  "received_motor_commands": 29,
+  "fault": null
+}

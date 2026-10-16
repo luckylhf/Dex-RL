@@ -1,0 +1,14 @@
+{
+  "policy": "/home/longhongfeng/Desktop/Dex-RL/Dex-RL/TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/exported/policy.onnx",
+  "steps": 532,
+  "simulation_seconds": 5.320000000000132,
+  "min_pelvis_height": 0.9427429169679153,
+  "final_position": [
+    1.267026479626782,
+    0.012953521580105902,
+    0.993334329663975
+  ],
+  "finite": true,
+  "collapsed": false,
+  "sequence": "constant"
+}

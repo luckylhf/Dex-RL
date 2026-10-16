@@ -1,0 +1,162 @@
+{
+  "source_files": {
+    "policy.pt": {
+      "path": "段工代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.pt",
+      "sha256": "881ee4fd6126590a153e684767f098d8b7c821777c404d0487d0c420ea257aed"
+    },
+    "policy.onnx": {
+      "path": "段工代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.onnx",
+      "sha256": "bb5442bcc7520677374a380a1c926b57eed8f72ba438a399e4fd23785a2a3f01"
+    },
+    "walk_amp.yaml": {
+      "path": "段工代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/config/walk_amp.yaml",
+      "sha256": "4d92aba0250d0d3ac8ba79a54c29866703dbe6acd010a7f9675e6b7674006162"
+    },
+    "tiangong2dex.urdf": {
+      "path": "段工代码/TienKung-Lab-dex/legged_lab/assets/EVT2/urdf/tiangong2dex.urdf",
+      "sha256": "a2107572c691645543c7f1402a1c89e459ff1fcb708129a71c9b2be4117014c8"
+    }
+  },
+  "walk_config": {
+    "joint_names": [
+      "hip_pitch_l_joint",
+      "hip_pitch_r_joint",
+      "waist_yaw_joint",
+      "hip_roll_l_joint",
+      "hip_roll_r_joint",
+      "waist_roll_joint",
+      "hip_yaw_l_joint",
+      "hip_yaw_r_joint",
+      "waist_pitch_joint",
+      "knee_pitch_l_joint",
+      "knee_pitch_r_joint",
+      "shoulder_pitch_l_joint",
+      "shoulder_pitch_r_joint",
+      "ankle_pitch_l_joint",
+      "ankle_pitch_r_joint",
+      "shoulder_roll_l_joint",
+      "shoulder_roll_r_joint",
+      "ankle_roll_l_joint",
+      "ankle_roll_r_joint",
+      "shoulder_yaw_l_joint",
+      "shoulder_yaw_r_joint",
+      "elbow_pitch_l_joint",
+      "elbow_pitch_r_joint"
+    ],
+    "gains": {
+      "kp": [
+        300.0,
+        300.0,
+        400.0,
+        300.0,
+        300.0,
+        400.0,
+        150.0,
+        150.0,
+        400.0,
+        350.0,
+        350.0,
+        150.0,
+        150.0,
+        30.0,
+        30.0,
+        50.0,
+        50.0,
+        16.8,
+        16.8,
+        50.0,
+        50.0,
+        150.0,
+        150.0
+      ],
+      "kd": [
+        10.0,
+        10.0,
+        5.0,
+        10.0,
+        10.0,
+        10.0,
+        5.0,
+        5.0,
+        10.0,
+        10.0,
+        10.0,
+        7.5,
+        7.5,
+        2.5,
+        2.5,
+        2.5,
+        2.5,
+        1.4,
+        1.4,
+        2.5,
+        2.5,
+        5.0,
+        5.0
+      ]
+    },
+    "init_state": {
+      "default_joint_angles": [
+        -0.15,
+        -0.15,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.0,
+        -0.0,
+        0.0,
+        0.3,
+        0.3,
+        0.2,
+        0.2,
+        -0.15,
+        -0.15,
+        0.1,
+        -0.1,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.5,
+        -0.5
+      ]
+    },
+    "size": {
+      "num_hist": 10,
+      "observations_size": 84
+    },
+    "actions_size": 23,
+    "motor_num": 29,
+    "normalization": {
+      "clip_scales": {
+        "clip_observations": 100.0,
+        "clip_actions": 100.0
+      },
+      "obs_scales": {
+        "lin_vel": 1.0,
+        "ang_vel": 1.0,
+        "dof_pos": 1.0,
+        "dof_vel": 1.0
+      }
+    }
+  },
+  "collision_links": [
+    "ankle_roll_l_link",
+    "ankle_roll_r_link",
+    "hip_pitch_l_link",
+    "hip_pitch_r_link",
+    "hip_yaw_l_link",
+    "hip_yaw_r_link",
+    "knee_pitch_l_link",
+    "knee_pitch_r_link",
+    "left_tcp_link",
+    "pelvis",
+    "right_tcp_link",
+    "shoulder_yaw_l_link",
+    "shoulder_yaw_r_link",
+    "waist_pitch_link",
+    "wrist_pitch_l_link",
+    "wrist_pitch_r_link"
+  ]
+}

@@ -1,0 +1,68 @@
+# ============================================================
+# Dex-RL V4 · 忽略规则（训练 + Sim2Sim + ROS2 部署栈）
+# ============================================================
+
+# ---------- macOS 无用文件 ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.DocumentRevisions-V100
+.com.apple.timemachine.donotpresent
+.AppleDouble
+.LSOverride
+Icon
+Network Trash Folder
+Temporary Items
+.AppleDB
+.AppleDesktop
+.apdisk
+
+# ---------- 根目录校验用 JSON（本机完整性校验基线，不随包分发）----------
+/original_sha256.json
+/previous_version_sha256.json
+/PROBLEM_STATE.md
+
+# ---------- artifacts/ 运行时输出 ----------
+# 由 scripts/ubuntu_job.py、export_policy.py、ros_closed_loop.py 运行时生成：
+#   remote_runs/  远程作业记录（pid.txt / job.json / result.json / output.log）
+#   ros_logs/     ROS 日志
+/artifacts/remote_runs/
+/artifacts/ros_logs/
+/artifacts/ros_closed_loop.json
+/artifacts/policy_equivalence.json
+# 注意：/artifacts/asset_cleanup_before.json 不可忽略——tests/test_dex_assets.py 会读取它
+# 例外：导出产物需随包分发，不忽略
+!/artifacts/exported_policy/
+
+# ---------- Python 构建 / 安装残留 ----------
+*.egg-info/
+__pycache__/
+*.py[cod]
+
+# ---------- colcon 构建产物（由 ros_ws/src 生成，可重新构建）----------
+/build/
+/install/
+/log/
+
+# ---------- 部署侧 .venv（由 init_env.sh 创建）----------
+/.venv/
+
+# ---------- pytest 缓存 ----------
+/.pytest_cache/
+
+# ---------- MuJoCo 运行时向 cwd 转储的诊断文件 ----------
+# mj_printData / mj_printModel / 运行日志未指定文件名时会写到当前目录
+MJDATA.TXT
+MJMODEL.TXT
+MUJOCO_LOG.TXT
+
+# ---------- 上游遗留的本机配置（内含他人机器路径）----------
+/TienKung-Lab/settings.json
+
+# ---------- 内部审计 / 过程文档（不随包分发）----------
+/自洽性检查报告-*.md
