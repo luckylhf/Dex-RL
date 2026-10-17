@@ -1,7 +1,0 @@
-[TRANSFER] init_from=/home/longhongfeng/Desktop/Dex-RL/Dex-RL-integrated-20261014-V4/TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/model_3300.pt
-[TRANSFER] source_sha256=ba390d0cadf94b0e50eb14c7ebc0c1f76c9411edc478c9c720cd1725dea7dd0e
-[TRANSFER] source_iteration=3300
-[TRANSFER] policy tensors transferred: 17/17
-[TRANSFER] policy tensors left at random init: []
-[TRANSFER] source tensors skipped: []
-[TRANSFER] AMP discriminator / amp normalizer / optimizer / iteration counter start fresh
