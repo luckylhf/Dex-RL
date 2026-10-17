@@ -1,7 +1,7 @@
 # Dex-RL V4 · 天工行者 Dex 训练与部署栈
 
 **版本**: V4（训练 + Sim2Sim + ROS2 闭环部署）
-**更新日期**: 2026-10-16
+**更新日期**: 2026-10-17
 
 > **📌 原始版本来源**
 >
@@ -24,7 +24,7 @@
 
 **Dex-RL V4** 是基于 TienKung-Lab 的强化学习**训练 + Sim2Sim + ROS2 闭环部署一体化包**，面向天工行者 Dex（Tienkung_Dex）人形机器人。框架结合 **AMP（Adversarial Motion Priors）** 模仿学习与**周期性步态奖励**，训练自然、稳定、可部署的行走与奔跑策略。
 
-本包覆盖从训练到部署的完整链路：Isaac Lab 训练 → 策略回放与 PT/ONNX 导出 → 独立 MuJoCo Sim2Sim → **ROS2 Humble + MuJoCo 闭环验收**（七状态 FSM、故障阻尼停止）。审计快照与历史证据已移除（见[📦 包边界](#-包边界与已移除内容)）。
+本包覆盖从训练到部署的完整链路：Isaac Lab 训练 → 策略回放与 PT/ONNX 导出 → 独立 MuJoCo Sim2Sim → **ROS2 Humble + MuJoCo 闭环验收**（七状态 FSM、故障阻尼停止）。过程文档与非 ROS 资产不在包内（见[📦 包边界](#-包边界)）。
 
 > ⚠️ **范围说明：本包以 walk 的 pipeline 为主。**
 >
@@ -39,7 +39,7 @@
 - ✅ **统一 400/100Hz**: 训练侧物理 `dt=0.0025 / decimation=4`，即物理 400Hz、策略 100Hz
 - ✅ **大规模并行**: 默认 4096 环境，已验证 4096 环境无头长训练
 - ✅ **独立 MuJoCo Sim2Sim**: 用 MjSpec 删除策略不控制的 6 个关节，复现训练侧 23 关节模型
-- ✅ **七状态部署 FSM 随包**: `Deploy_Tienkung/policy/` 六个策略目录提供 `STOP` / `ZERO` / `WALKAMP` / `BEYONDZERO` / `BEYONDMIMIC` / `MIMIC` / `MIMICDEFAULT` 七状态，含配对 PT/ONNX
+- ✅ **七状态部署 FSM 随包**: `Deploy_Tienkung/policy/` 六个策略目录提供 `STOP` / `ZERO` / `WALKAMP` / `BEYONDZERO` / `BEYONDMIMIC` / `MIMIC` / `MIMICDEFAULT` 七状态；其中 `WALKAMP`（`walk_amp/model/policy.{pt,onnx}`）、`BEYONDMIMIC`（`niukua/model/*.onnx`）、`MIMIC`（`mimic/out/policy_merged.onnx`）带模型，`STOP` / `ZERO` / `BEYONDZERO` 为保持类实现，不需要策略文件
 - ✅ **ROS2 + MuJoCo 闭环**: 四包 colcon 工作区，控制节点与 xSIM 仿真节点经 DDS 闭环，含反馈/推理故障注入下的阻尼停止验收
 - ✅ **断点续训 / 权重热启动**: `--resume` 精确续训，`--init_from` 只迁移 actor/critic/std
 - ✅ **自包含回归测试**: 训练侧 22 个用例不依赖包外代码
@@ -65,7 +65,7 @@
 | 项目 | 要求 |
 | --- | --- |
 | **操作系统** | Ubuntu 22.04 LTS |
-| **GPU** | NVIDIA RTX 30 系列及以上，显存 16G 及以上。⚠️ 要按**空闲**显存判断：4096 环境实测约 14.5G，而桌面与常驻进程会先占掉 2~3G（本机 16G 卡实测空闲仅 12.9G），此时降到 `--num_envs=2048` 可正常跑，迭代约 13.5 s/次 |
+| **GPU** | NVIDIA RTX 30 系列及以上，显存 16G 及以上。⚠️ 要按**空闲**显存判断：4096 环境实测约 14.5G，而桌面与常驻进程会先占掉 2~3G（16G 卡空闲常只剩 12~13G），此时降到 `--num_envs=2048` 可正常跑，迭代约 13.5 s/次 |
 | **内存** | 32GB+（4096 环境实测充足） |
 | **磁盘** | 512GB+ SSD |
 | **ROS2** | Humble（仅闭环与部署需要；训练与 Sim2Sim 不依赖） |
@@ -107,9 +107,9 @@ bash scripts/ubuntu_env.sh python -m pip install --no-deps -e TienKung-Lab      
 bash scripts/ubuntu_env.sh python -m pip install --no-deps -e TienKung-Lab/rsl_rl   # 分发名 rsl-rl-lib，模块 rsl_rl
 ```
 
-> 用 `python -m pip` 而非裸 `pip`：`~/.local/bin/pip` 常排在 conda 环境之前，裸 `pip` 会落到系统 pip 上（实测 Debian pip 22.0.2 + 系统 setuptools），因缺 `tomli` 直接报 `metadata-generation-failed`。
+> 用 `python -m pip` 而非裸 `pip`：`~/.local/bin/pip` 常排在 conda 环境之前，裸 `pip` 会落到系统 pip 上，可能因缺 `tomli` 直接报 `metadata-generation-failed`。
 >
-> 用 `--no-deps`：这两步只做**本地绑定**，依赖全部由 Isaac Lab 环境提供，无需 pip 再解析一遍。不加 `--no-deps` 时 pip 会读取 `TienKung-Lab/setup.py` 的 `install_requires`（`IsaacLab`、`pynput`、`mujoco==3.3.2`、`matplotlib`），其中 `IsaacLab` 在 PyPI 上可能匹配到无关同名包而污染环境，或解析失败直接中断安装。`--no-deps` 写在 `-e` 之前或之后均可（本机实测两种顺序等效）。
+> 用 `--no-deps`：这两步只做**本地绑定**，依赖全部由 Isaac Lab 环境提供，无需 pip 再解析一遍。不加 `--no-deps` 时 pip 会读取 `TienKung-Lab/setup.py` 的 `install_requires`（`IsaacLab`、`pynput`、`mujoco==3.3.2`、`matplotlib`），其中 `IsaacLab` 在 PyPI 上可能匹配到无关同名包而污染环境，或解析失败直接中断安装。`--no-deps` 写在 `-e` 之前或之后均可。
 
 与上游说明一致（见 [`TienKung-Lab/README.md`](TienKung-Lab/README.md) 的 Installation 一节）。装完确认绑定来源指向**本包**而非别处同名目录：
 
@@ -118,9 +118,9 @@ bash scripts/ubuntu_env.sh python -c \
   "import importlib.util as u; [print(m, u.find_spec(m).origin) for m in ('legged_lab','rsl_rl')]"
 ```
 
-> ⚠️ **目录改名或搬移后必须重绑。** editable 安装会把**绝对路径**写进环境的 `.pth` 与 finder 文件；此后一旦把包目录改名（例：`Dex-RL-integrated-20261014-V4` → `Dex-RL-integrated-20261016-V5` → `Dex-RL`）、搬到其它路径或更换用户名，这两个模块就指向已不存在的旧路径，训练入口在导入阶段即失败（实测 `ModuleNotFoundError: No module named 'legged_lab'`）。此时重跑上面两条安装命令即可恢复。
+> ⚠️ **目录改名或搬移后必须重绑。** editable 安装会把**绝对路径**写进环境的 `.pth` 与 finder 文件；此后一旦把包目录改名（例：把带日期后缀的目录名改成 `Dex-RL`）、搬到其它路径或更换用户名，这两个模块就指向已不存在的旧路径，训练入口在导入阶段即失败（实测 `ModuleNotFoundError: No module named 'legged_lab'`）。此时重跑上面两条安装命令即可恢复。
 >
-> ⚠️ **同机只保留一份被绑定的拷贝。** `import legged_lab` 永远来自最近一次 `pip install -e` 绑定的那份目录。若同机并存多份（例：同时留着本包与备份包 `Dex-RL-integrated-20261014-V4 (全量备份)`），在**未绑定**的那份里跑训练会静默加载另一份的代码且不报错；按需重绑，或只保留一份。
+> ⚠️ **同机只保留一份被绑定的拷贝。** `import legged_lab` 永远来自最近一次 `pip install -e` 绑定的那份目录。若同机并存多份（例如同机还留着一份旧备份），在**未绑定**的那份里跑训练会静默加载另一份的代码且不报错；按需重绑，或只保留一份。
 
 ROS2 闭环的环境组合不同（需同时激活 conda 与 Humble），**不能**只靠 `ubuntu_env.sh` 启动，见下文「ROS2 + MuJoCo 闭环」。
 
@@ -133,7 +133,7 @@ ROS2 闭环的环境组合不同（需同时激活 conda 与 Humble），**不�
 | 文档 | 内容 | 说明 |
 | --- | --- | --- |
 | **[docs/DISCLAIMER.md](docs/DISCLAIMER.md)** | 免责声明 / Disclaimer | **使用前必读** |
-| **[docs/ROS_CLOSED_LOOP_GAP.md](docs/ROS_CLOSED_LOOP_GAP.md)** | ROS2 闭环的依赖清单、构建与验收记录 | 部署侧交接 |
+| **[docs/ROS_CLOSED_LOOP_GAP.md](docs/ROS_CLOSED_LOOP_GAP.md)** | ROS2 闭环的使用说明与验收结论 | 部署侧交接 |
 | **[TienKung-Lab/README.md](TienKung-Lab/README.md)** | 上游训练框架说明 | 算法细节补充 |
 
 ---
@@ -162,7 +162,7 @@ Dex-RL/
 │   │   │       ├── walk_cfg.py         # 行走任务与环境配置
 │   │   │       ├── run_cfg.py          # 奔跑任务与环境配置
 │   │   │       └── datasets/
-│   │   │           ├── motion_amp_expert/      # AMP 专家轨迹（walk.txt / run.txt）
+│   │   │           ├── motion_amp_expert/      # AMP 专家轨迹（训练用 walk.txt / run.txt）
 │   │   │           └── motion_visualization/   # 可视化参考轨迹
 │   │   ├── mdp/rewards.py              # 奖励函数库
 │   │   ├── sensors/ terrains/ utils/
@@ -185,7 +185,7 @@ Dex-RL/
 │   │       └── utils/                  # motion_loader(_for_display).py
 │   │
 │   ├── shell/                          # train.sh / play.sh / sim2sim.sh
-│   ├── logs/                           # 训练产物：dex_walk（20000 迭代）/ dex_run（100 迭代）
+│   ├── logs/                           # 训练产物：dex_walk（3300 次更新）/ dex_run（100 次更新）
 │   └── setup.py
 │
 ├── Deploy_Tienkung/                    # rl_control：部署观测实现 + 七状态 FSM + 配对策略
@@ -233,9 +233,9 @@ Dex-RL/
 │   ├── sync_dex.py                     # 由源本体再派生训练/部署模型
 │   └── ros_closed_loop.py              # ROS2 + MuJoCo 闭环验收
 │
-├── tests/                              # 回归测试（90 用例）
-├── artifacts/                          # 运行记录（remote_runs/、ros_logs/、验收 JSON）
-├── .gitignore                          # 忽略构建产物、缓存、运行时记录与内部台账
+├── tests/                              # 回归测试（91 用例）
+├── artifacts/                          # 运行记录（后台任务、ROS 日志、验收 JSON）
+├── .gitignore                          # 忽略构建产物、缓存与运行时记录
 └── README.md
 ```
 
@@ -446,7 +446,7 @@ python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_run --headless \
 
 > 📌 日志末尾那行 `Xlib: extension "NV-GLX" missing on display ":1"` **不是失败原因**，而是 viewer 关闭时的收尾信息——完整跑满 `1500/1500` 步的成功运行同样会打印它。
 
-> 📌 判定口径：`min_pelvis_height` 只说明未倒地，**不等于速度跟踪合格**。低速（0.4 m/s）跟踪偏弱是当前已知边界，详见 [PROBLEM_STATE.md](PROBLEM_STATE.md)。
+> 📌 判定口径：`min_pelvis_height` 只说明未倒地，**不等于速度跟踪合格**。低速（0.4 m/s）跟踪偏弱是当前已知边界。
 
 ---
 
@@ -479,7 +479,7 @@ colcon build --base-paths ros_ws/src \
     --cmake-args -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPython3_EXECUTABLE=/usr/bin/python3
 ```
 
-从零构建实测约 **39.6 秒**（其中 36.7 秒耗在 `bodyctrl_msgs` 的消息代码生成上）。之后每次使用都需要：
+首次构建的主要耗时在 `bodyctrl_msgs` 的消息代码生成上。之后每次使用都需要：
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -516,7 +516,7 @@ python scripts/ros_closed_loop.py --duration 15 \
 - **常规**：`validation_error` / `controller_error` / `simulator_error` / `collapsed` 任一非空，或状态序列中不含 `WALKAMP` → 退出码 1
 - **故障**：须同时满足「无 `validation_error`」且「有 `controller_error`」且「`damping_stop_received` 为真」
 
-实测结果（2026-10-16，本机）：
+验收结果（2026-10-16）：
 
 | 用例 | 退出码 | 仿真秒 | 最低骨盆 | 前向位移 | 关键字段 |
 | --- | --- | --- | --- | --- | --- |
@@ -569,14 +569,14 @@ ros2 launch sim_joy teleop_joy.launch.py        # 只起手柄遥操作（Tk GUI
 ```
 
 > `.venv` 路线与上文「系统 Humble + `env_isaaclab`」是两套独立环境，按需选一套即可。
-> 本轮**端到端验证了 `scripts/ros_closed_loop.py`**（走系统 Humble 路线）；`ros2 launch rl_control sim.launch.py model:=dex_v3 robot_config:=full` 也已复跑，结论与注意事项如下：
 >
-> - 走「系统 Humble + conda」路线时，节点实际由系统 `python3` 执行，需要把 conda 站点包注入 `PYTHONPATH`：`export PYTHONPATH="$CONDA_PREFIX/lib/python3.10/site-packages:$PYTHONPATH"`；`ROS_DOMAIN_ID` 用 `42`（`run_sim.sh` 默认）。注意 `ros_closed_loop.py` 用的是 `os.environ.setdefault('ROS_DOMAIN_ID', '137')` 并设 `ROS_LOCALHOST_ONLY=1`——即**只有你没设置时才落到 137**，外层若已设 42 它就跟随 42；两条路线的域号不一致时会互相看不见话题。
-> - ⚠️ **GUI 会被「关窗」带走，容易误判成启动失败**：复跑期间 GUI 进程曾整体退出，事后确认为**手动关闭 MuJoCo / Tk 窗口**所致——关 MuJoCo 窗口 → `viewer` 线程退出 → `Simulation thread stopped` → `ROS2 spin thread terminated`，viewer 关闭时打印 `Xlib: extension "NV-GLX" missing on display ":1"`（收尾信息，不是失败原因）；关 Tk 窗口 → `teleop_gui` 正常退出；控制节点随即以 `imu sensor sample is older than 0.5 s` 停止。同显示下 `mujoco.viewer.launch_passive()` 单独实测能正常开窗（`is_running=True`），隔离运行 `ros2 launch mujoco_node mujoco_sim.launch.py` 时 `xwininfo` 可见 `"MuJoCo : tiangong3_urdf"` 窗口且节点持续运行，**说明不是该显示不支持 GLFW**。长跑请脱离终端（`nohup ros2 launch ... > log 2>&1 &`）或放进 tmux，避免关窗把整栈带走。
-> - 需要无界面的等价验收时用 `scripts/ros_closed_loop.py`；只要数值、不要视窗时给 `sim2sim.py` 加 `--headless`。
-> - 顺带说明：上述 GUI 进程退出后，控制节点确实**真实触发了一次「反馈超龄 → 阻尼停止」保护**，报错与 `--fault feedback` 用例完全一致。
-
-> 📌 ROS 侧完整依赖清单、构建经过与验收数据见 [docs/ROS_CLOSED_LOOP_GAP.md](docs/ROS_CLOSED_LOOP_GAP.md)。
+> - **走系统 Humble + conda 路线**：节点由系统 `python3` 执行，需把 conda 站点包注入 `PYTHONPATH`：
+>   `export PYTHONPATH="$CONDA_PREFIX/lib/python3.10/site-packages:$PYTHONPATH"`。
+> - **`ROS_DOMAIN_ID` 必须一致**：`run_sim.sh` 默认 `42`；`ros_closed_loop.py` 用 `os.environ.setdefault('ROS_DOMAIN_ID', '137')` 且设 `ROS_LOCALHOST_ONLY=1`，即外层已设时跟随外层。两条路线的域号不一致会互相看不见话题。
+> - ⚠️ **关窗口会把整栈带走**：关 MuJoCo 窗口 → viewer 线程退出 → 仿真与控制随之停止，控制节点以 `imu sensor sample is older than 0.5 s` 触发阻尼停止；关 Tk 窗口 → `teleop_gui` 正常退出。长跑请用 `nohup` 或 tmux，避免误判成启动失败。
+> - 需要无界面等价验收时用 `scripts/ros_closed_loop.py`；只要数值、不要视窗时给 `sim2sim.py` 加 `--headless`。
+>
+> 📌 ROS 侧的完整使用说明与验收数据见 [docs/ROS_CLOSED_LOOP_GAP.md](docs/ROS_CLOSED_LOOP_GAP.md)。
 
 ---
 
@@ -626,7 +626,7 @@ python3 scripts/ubuntu_job.py my_walk_4096 bash scripts/ubuntu_train.sh \
 
 产物在 `artifacts/remote_runs/<job_id>/`：`job.json`（完整命令）、`pid.txt`、`output.log`、`result.json`（`returncode` 为实际退出码）。**没有 `result.json` 时不要当作成功**，需结合 PID 判断。
 
-> ⚠️ 在终端窗口里**前台**跑（包括直接调用 `ubuntu_train.sh`）不算后台任务：窗口一关、进程随之消失，既不会写 `result.json`，**也不会写最终存档**（只剩 `save_interval` 的周期存档）。实测一次 `--num_envs=2048 --max_iterations=20` 的冒烟训练只跑到 `3/20`（约 54 s）进程就没了，仅留下 `model_0.pt` 与 tfevents——事后无法判定是正常结束还是被中断。长训练一律用本节的 `ubuntu_job.py`。
+> ⚠️ 在终端窗口里**前台**跑（包括直接调用 `ubuntu_train.sh`）不算后台任务：窗口一关、进程随之消失，既不会写 `result.json`，**也不会写最终存档**（只剩 `save_interval` 的周期存档），事后无法判定是正常结束还是被中断。长训练一律用本节的 `ubuntu_job.py`。
 
 ---
 
@@ -636,7 +636,7 @@ python3 scripts/ubuntu_job.py my_walk_4096 bash scripts/ubuntu_train.sh \
 
 ```bash
 source /opt/ros/humble/setup.bash && source install/setup.bash
-python -m pytest tests -q -p no:cacheprovider     # 90 passed
+python -m pytest tests -q -p no:cacheprovider     # 91 passed
 ```
 
 覆盖范围（14 个文件）：
@@ -645,22 +645,19 @@ python -m pytest tests -q -p no:cacheprovider     # 90 passed
 - **ROS / 部署侧**：`test_ros_closed_loop.py`、`test_ros_lifecycle.py`、`test_ros_packaging.py`、`test_pd_hold.py`、`test_simulator_timing.py`、`test_mimic_debug_timing.py`、`test_entry_consistency.py`、`test_regressions.py`
 - **工具链**：`test_export_default.py`（策略导出默认值）、`test_ubuntu_jobs.py`（后台任务入口）
 
-> 全量合并版为 137 项；本包剔除 `test_foot_collisions.py`、`test_v3_model.py`、`test_v4_merge.py` 三个依赖非 ROS 模型资产的文件后为 **90 项、0 失败**。
+> 当前共 **91 项、0 失败**。
 
 ---
 
-## 📦 包边界与已移除内容
+## 📦 包边界
 
-本包包含**训练 + Sim2Sim + ROS2 闭环部署**的完整链路。相对全量合并版，以下内容仍不在包内：
+本包包含**训练 + Sim2Sim + ROS2 闭环部署**的完整链路。以下内容**不在包内**：
 
-- **非 ROS 模型资产**：`Tienkung_Dex/mujoco` 的 `meshes_convex/`（4.1M）、`meshes_simplify/`（15M）、`tiangong3_torq.xml`、`tiangong3_simplify.xml`，生成器脚本 `Tienkung_Dex/script/`，以及 `artifacts/legacy_assets_before_cleanup/`（387M）
-  - 说明：`scripts/sync_dex.py` 只读 `Tienkung_Dex/urdf/tiangong3.urdf`、写 `tiangong3_ros.urdf` 并解析 `walk.py` 取参数，**不依赖**被移除的 `script/`，可直接运行
-- **已删除的失效平行模型**：`xSIM_MUJOCO-main/resources/` 下原有的 `evt2`（12M）、`tiangong3`（18M）、`terrain`（32K）为老旧样机模型，已从包内删除，现只保留闭环使用的 `dex_v3`
-  - 随之 `simulator_view_asyn.py` 的模型注册表只保留 `dex_v3`，`--model` 不再接受 `evt2` / `tg3` / `tg3_terrain`
-- **依赖上述资产的测试**：`test_foot_collisions.py`、`test_v3_model.py`、`test_v4_merge.py`（全量版 137 项 → 本包 90 项、0 失败）
-- **审计与历史证据**：`artifacts/` 的历史快照（仅保留 `remote_runs/`、`ros_logs/`、`asset_cleanup_before.json` 与闭环验收 JSON）、`MERGE_REVIEW.md` / `VALIDATION.md` / `CHANGE_STATUS.md` / `FOOT_COLLISION_CHANGE_LIST.md` / `REMOTE_WORKFLOW.md` / `REMAINING_DECISIONS.md` / `REVIEW_README.md` 等过程文档
+- **非 ROS 的 MuJoCo 备选资产**：`Tienkung_Dex/mujoco/` 下的 `meshes_convex/`、`meshes_simplify/`、`tiangong3_torq.xml`、`tiangong3_simplify.xml`，以及模型生成脚本。`scripts/sync_dex.py` 不依赖它们，可直接运行。
+- **历史样机模型**：`xSIM_MUJOCO-main/resources/` 只保留闭环使用的 `dex_v3`（`simulator_view_asyn.py` 的模型注册表同此）。
+- **依赖上述资产的测试**：仅与这些资产相关的用例未随包提供。
 
-需要这些内容时请从全量备份 `Dex-RL-integrated-20261014-V4(全量).zip` 取回。
+如需完整资产，请使用对应的完整发布包。
 
 ---
 
