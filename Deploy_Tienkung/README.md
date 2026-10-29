@@ -1,4 +1,8 @@
-> V4：本目录同时是rl_control ROS包，经ros_ws/src链接接入完整仿真栈。采用段工七状态和配对策略/PD，新本体ROS29关节、策略100Hz，MuJoCo物理400Hz。ROS 0.8m/s站走停本机通过，MIMIC自由运动未通过；请先读根README.md及PROBLEM_STATE.md。源码运行和ROS安装运行均支持默认sim/real配置；安装入口从包share读取配置。下文上游说明保留供参考。
+> V4：本目录同时是rl_control ROS包，经ros_ws/src链接接入完整仿真栈。采用工程师实测七状态，新本体ROS29关节、策略100Hz，MuJoCo物理400Hz。ROS 0.8m/s站走停为增益修改前的历史结果，MIMIC自由运动未通过；当前步行增益须重新验收。请先读根README.md。源码运行和ROS安装运行均支持默认sim/real配置；安装入口从包share读取配置。下文上游说明保留供参考。
+
+> **步行模型与增益**：部署 ONNX 前，确认它对应的 checkpoint 和训练 run，从该 run 的 `params/env.yaml` 读取关节 `stiffness` / `damping`，按 `policy/walk_amp/config/walk_amp.yaml` 的 `joint_names` 填入 `gains.kp` / `gains.kd`。更换模型不会自动同步增益。当前 YAML 的膝 pitch KP 为 330、肩 pitch KD 为 5，数值对齐包内 3300 步行训练快照；包内默认 ONNX 的 checkpoint 对应关系仍需确认。
+>
+> 脚踝填训练用的串联关节空间增益；真机使用 `sptlib_python` 做并联反馈转串联、串联命令转并联，并保留当前策略增益，遵循工程师实测部署方式。仿真不执行真机脚踝转换。安装运行时须核对实际加载的 YAML 和模型，必要时重新构建。完整步骤和验证边界见根 README「步行模型部署时的 KP/KD 和脚踝转换」。
 
 
 # xMIGCS

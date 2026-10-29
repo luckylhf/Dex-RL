@@ -51,7 +51,7 @@ python scripts/ros_closed_loop.py --duration 15 \
 
 > 脚本内部固定 `headless=True`，**不打开 MuJoCo 窗口**，只产出 JSON 报告。需要界面请走第 6 节。
 >
-> 默认策略为 `Deploy_Tienkung/policy/walk_amp/model/policy.onnx`。要换用某个 checkpoint 的导出产物，改 `Deploy_Tienkung/policy/walk_amp/config/walk_amp.yaml` 第 1 行 `model_path` 即可。
+> 仓库默认策略为 `Deploy_Tienkung/policy/walk_amp/model/policy.onnx`，实际路径以运行环境的 `walk_amp.yaml` 为准。换模型可修改其 `model_path`，或使用 `--policy` 临时指定；两者都不会自动同步增益。请按根 README「步行模型部署时的 KP/KD 和脚踝转换」核对模型来源、训练快照和 `gains`。
 
 ## 4. 判据
 
@@ -61,6 +61,8 @@ python scripts/ros_closed_loop.py --duration 15 \
 - **故障用例**：须同时满足「无 `validation_error`」「有 `controller_error`」「`damping_stop_received` 为真」，否则退出码 **1**。
 
 ## 5. 验收结论（2026-10-16）
+
+以下是历史仿真结果，测量时的步行部署增益为膝 KP 350、肩 pitch KD 7.5；当前 YAML 已对齐训练快照（分别为 330 和 5），这些结果不构成修改后配置的验收，也不验证真机脚踝转换。
 
 | 用例 | 退出码 | 仿真秒 | 最低骨盆 (m) | 前向位移 (m) | 关键字段 |
 | --- | --- | --- | --- | --- | --- |

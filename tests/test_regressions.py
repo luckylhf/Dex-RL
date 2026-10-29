@@ -53,19 +53,20 @@ def test_training_and_deployment_keep_their_paired_gains():
                 any(isinstance(a, ast.Name) and a.id == 'DEX_V3_CFG' for a in n.targets))
     actuators = next(k.value for k in call.keywords if k.arg == 'actuators')
     cfg = yaml.safe_load((ROOT / 'Deploy_Tienkung/policy/walk_amp/config/walk_amp.yaml').read_text())
+    snapshot = yaml.load((ROOT / 'TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/params/env.yaml').read_text(), Loader=yaml.BaseLoader)
     import re
     for i, name in enumerate(cfg['joint_names']):
-        for actuator in actuators.values:
-            for field, gain in [('stiffness', 'kp'), ('damping', 'kd')]:
+        for field, gain in [('stiffness', 'kp'), ('damping', 'kd')]:
+            matches = []
+            for actuator in actuators.values:
                 values = ast.literal_eval(next(k.value for k in actuator.keywords if k.arg == field))
                 for pattern, value in values.items():
                     if re.fullmatch(pattern, name):
-                        expected = value
-                        if field == 'stiffness' and name.startswith('knee_pitch_'):
-                            expected = 350
-                        if field == 'damping' and name.startswith('shoulder_pitch_'):
-                            expected = 7.5
-                        assert cfg['gains'][gain][i] == expected, (name, gain)
+                        matches.append(value)
+            saved = [float(value) for actuator in snapshot['scene']['robot']['actuators'].values()
+                     for pattern, value in actuator[field].items() if re.fullmatch(pattern, name)]
+            assert len(matches) == len(saved) == 1, (name, gain, matches, saved)
+            assert cfg['gains'][gain][i] == matches[0] == saved[0], (name, gain)
 
 
 def test_mujoco_matches_training_active_joints_and_mass():

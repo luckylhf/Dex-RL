@@ -843,7 +843,7 @@ class RobotSimulator:
                     if self.trigger_reset:
                         self._reset_robot()
                         self.trigger_reset = False
-                    # GUI按段工A/C/D规则启动；无头验收直接运行。
+                    # GUI按工程师实测A/C/D规则启动；无头验收直接运行。
                     if not self.paused and self.simulation_started:
                         mujoco.mj_step(self.model, self.data)
                     else:

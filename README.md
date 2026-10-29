@@ -28,7 +28,7 @@
 
 > ⚠️ **范围说明：本包以 walk 的 pipeline 为主。**
 >
-> - **walk**：训练 → 导出 → 独立 MuJoCo Sim2Sim → ROS2 闭环，**全链路均已验证**，验收数据随包（见[🤖 ROS2 + MuJoCo 闭环](#-ros2--mujoco-闭环)与[✅ 回归测试](#-回归测试)）。
+> - **walk**：训练 → 导出 → 独立 MuJoCo Sim2Sim → ROS2 闭环曾完成验证，历史数据随包；步行部署增益现已对齐训练快照，修改后的配置须重新验收（见[🤖 ROS2 + MuJoCo 闭环](#-ros2--mujoco-闭环)）。
 > - **run**：**只跑通了训练通路**（4096 环境、100 迭代，产出 `model_0.pt` / `model_100.pt` 及导出的 TorchScript），未做长训练，也未对跑步步态质量做验收；包内 run 示例仅用于确认通路可跑。
 > - 若需要 run 的**训练 / 策略回放 / 独立 Sim2Sim** 这三条通路，参照 walk 的流程照做即可（把 `--task=dex_walk` 换成 `--task=dex_run`）。但 **ROS2 闭环与部署侧不接 `--task`**（`scripts/ros_closed_loop.py` 只有 `--duration` / `--policy` / `--band` / `--fault` / `--output`），仍固定加载 `walk_amp` 配置；run 要上闭环需另做部署侧适配。
 
@@ -516,7 +516,7 @@ python scripts/ros_closed_loop.py --duration 15 \
 - **常规**：`validation_error` / `controller_error` / `simulator_error` / `collapsed` 任一非空，或状态序列中不含 `WALKAMP` → 退出码 1
 - **故障**：须同时满足「无 `validation_error`」且「有 `controller_error`」且「`damping_stop_received` 为真」
 
-验收结果（2026-10-16）：
+历史验收结果（2026-10-16；使用修改前的膝 KP 350、肩 pitch KD 7.5，不代表当前增益已通过验收）：
 
 | 用例 | 退出码 | 仿真秒 | 最低骨盆 | 前向位移 | 关键字段 |
 | --- | --- | --- | --- | --- | --- |
@@ -534,7 +534,7 @@ python scripts/ros_closed_loop.py --duration 15 \
 
 ### 把闭环切到某个 checkpoint 的策略
 
-闭环默认加载 `Deploy_Tienkung/policy/walk_amp/model/policy.onnx`（包内配对策略）。要改用任意 checkpoint 的导出产物，只需改 `Deploy_Tienkung/policy/walk_amp/config/walk_amp.yaml` 第 1 行：
+仓库默认配置加载 `Deploy_Tienkung/policy/walk_amp/model/policy.onnx`；实际加载路径以运行环境的 `walk_amp.yaml` 为准。切换模型前须确认 ONNX 对应的 checkpoint 和训练配置，再核对并按需更新步行增益；仅修改路径不会自动同步增益。模型路径在 `Deploy_Tienkung/policy/walk_amp/config/walk_amp.yaml`：
 
 ```yaml
 # 默认：相对 policy/walk_amp/model/ 目录
@@ -547,6 +547,16 @@ model_path: /abs/path/TienKung-Lab/logs/dex_walk/<run>/exported/policy.onnx
 - 该字段由 `policy/walk_amp/fsm_walkamp.py` 读取；生效后日志会出现 `[FSMStateWALKAMP-ONNX] ONNX model loaded successfully: ...`。实测填入 3300 的导出 ONNX 后，FSM 正常 `STOP → ZERO → WALKAMP`（见上表）。
 - ⚠️ `walk_amp.yaml` 是**共享配置**：`sim2sim.py` 也读它来取 `joint_names` / `gains` / `init_state` / `dt`。改 `model_path` 只影响 ROS 侧选哪个策略，但改其它字段会**同时**影响 Sim2Sim 与部署侧。
 - 只想临时验证、又不想动包内文件：直接用闭环脚本的 `--policy`（仅改内存路径），不需要改 yaml。
+
+### 步行模型部署时的 KP/KD 和脚踝转换
+
+1. 确认要部署的 ONNX 由哪个 checkpoint 导出，并找到该次训练目录的 `params/env.yaml`。不要仅凭文件名推断模型与训练记录的对应关系。
+2. 在训练快照的 `scene.robot.actuators` 中读取各关节的 `stiffness`（KP）和 `damping`（KD），按 `walk_amp.yaml` 的 `joint_names` 逐项填写 `gains.kp` / `gains.kd`。训练快照使用关节名称匹配表达式；左右关节都要核对。步行 FSM 从此 YAML 读取增益，不会从 checkpoint、ONNX 或训练快照自动同步。
+3. 本包当前步行增益与 `dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/params/env.yaml` 对齐：左右膝 pitch KP 为 **330**，左右肩 pitch KD 为 **5**；左右脚踝 pitch 为 **30 / 2.5**，roll 为 **16.8 / 1.4**（KP / KD）。这说明配置数值的来源，不代表包内 ONNX 已确认由该 checkpoint 导出。
+4. 脚踝填写的是策略所用的串联关节空间增益。真机 `sim=false` 时，`common/robot_interface.py` 使用 `sptlib_python` 将并联电机反馈转换到串联关节空间；下发前用当前策略增益计算关节力矩，再转换为并联命令，保留当前策略增益，遵循工程师实测部署的处理方式。不要用 `dex_config_real.yaml` 中的全局 `ankle_kp_p` / `ankle_kd_p` 替换这条转换路径中的策略增益。仿真模式不运行此真机转换。
+5. 确认实际运行环境加载的是更新后的模型和配置：源码运行读取策略模块旁的 YAML；ROS 安装运行须核对安装环境实际加载的文件，必要时重新构建并核验。不要把 `--policy` 临时切换模型理解为同步了增益。
+
+本次步行增益对齐会同时改变 walk 的独立 Sim2Sim 和 ROS 闭环使用的增益；`dex_run` 的独立 Sim2Sim 会另从 `run.py` 覆盖增益。上面的历史仿真数据是在修改前测得，不能作为新增益或真机脚踝转换的验收结果；须对最终模型与配置重新验证。run 的 ROS 部署仍需另行适配。
 
 ### 启动仿真栈
 

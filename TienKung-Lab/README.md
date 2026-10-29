@@ -1,4 +1,4 @@
-> V4：Dex专用，训练walk/run均物理400Hz、策略100Hz；同一Tienkung_Dex派生23关节训练URDF，末端6轴fixed。每脚7圆柱、导入False、初始0.995m；训练参数按段工对应阶段，用户rewards.py保留。目标Isaac训练未实测，当前运行步骤以根README.md为准。
+> V4：Dex专用，训练walk/run均物理400Hz、策略100Hz；同一Tienkung_Dex派生23关节训练URDF，末端6轴fixed。每脚7圆柱、导入False、初始0.995m；训练参数按工程师实测对应阶段，用户rewards.py保留。目标Isaac训练未实测，当前运行步骤以根README.md为准。
 
 # TienKung-Lab: Direct IsaacLab Workflow for TienKung
 

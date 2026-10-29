@@ -1,19 +1,19 @@
 {
   "source_files": {
     "policy.pt": {
-      "path": "段工代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.pt",
+      "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.pt",
       "sha256": "881ee4fd6126590a153e684767f098d8b7c821777c404d0487d0c420ea257aed"
     },
     "policy.onnx": {
-      "path": "段工代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.onnx",
+      "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.onnx",
       "sha256": "bb5442bcc7520677374a380a1c926b57eed8f72ba438a399e4fd23785a2a3f01"
     },
     "walk_amp.yaml": {
-      "path": "段工代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/config/walk_amp.yaml",
+      "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/config/walk_amp.yaml",
       "sha256": "4d92aba0250d0d3ac8ba79a54c29866703dbe6acd010a7f9675e6b7674006162"
     },
     "tiangong2dex.urdf": {
-      "path": "段工代码/TienKung-Lab-dex/legged_lab/assets/EVT2/urdf/tiangong2dex.urdf",
+      "path": "工程师实测代码/TienKung-Lab-dex/legged_lab/assets/EVT2/urdf/tiangong2dex.urdf",
       "sha256": "a2107572c691645543c7f1402a1c89e459ff1fcb708129a71c9b2be4117014c8"
     }
   },
