@@ -56,7 +56,7 @@
 - 随包独立 ROS 包（BrainCo Revo2 / Inspire RH5DG2 灵巧手描述包、USD 候选资产包）及其派生 URDF（`tiangong3_brainco.urdf`、`tiangong3_inspire.urdf`）
 - 本目录的许可证正文 `LICENSE`
 
-`scripts/sync_dex.py` **不依赖**上述被移除内容：它只读 `urdf/tiangong3.urdf`、写 `urdf/tiangong3_ros.urdf`，并解析 `walk.py` 取 `DEX_V3_CFG` 参数。
+`scripts/sync_dex.py` **不依赖**上述被移除内容；它读取源 URDF、`walk.py` 和包内腰部上下两块 OBJ，并覆盖派生 URDF、仿真关节配置、转换 OBJ 与正式 `dex_v3.xml`。运行前请保留本地修改，运行后检查 `git diff`。
 
 ## 许可证
 

@@ -568,7 +568,7 @@ python -m pytest tests -q -p no:cacheprovider     # 91 passed
 
 本包包含训练、Sim2Sim 和 ROS2 闭环仿真入口。以下内容不在包内：
 
-- **非 ROS 的 MuJoCo 备选资产**：`Tienkung_Dex/mujoco/` 下的 `meshes_convex/`、`meshes_simplify/`、`tiangong3_torq.xml`、`tiangong3_simplify.xml`，以及模型生成脚本。`scripts/sync_dex.py` 不依赖它们，可直接运行。
+- **非 ROS 的 MuJoCo 备选资产**：`Tienkung_Dex/mujoco/` 下的 `meshes_convex/`、`meshes_simplify/`、`tiangong3_torq.xml`、`tiangong3_simplify.xml`，以及模型生成脚本。`scripts/sync_dex.py` 不依赖这些备选资产，但依赖包内 `meshes_import/` 的腰部上下两块 OBJ。运行时会覆盖两份派生 URDF、`dex_config.yaml`、转换生成的 OBJ 和正式闭环模型 `dex_v3.xml`；请先保留本地修改，运行后检查 `git diff`。
 - **历史样机模型**：`xSIM_MUJOCO-main/resources/` 只保留闭环使用的 `dex_v3`（`simulator_view_asyn.py` 的模型注册表同此）。
 - **依赖上述资产的测试**：仅与这些资产相关的用例未随包提供。
 

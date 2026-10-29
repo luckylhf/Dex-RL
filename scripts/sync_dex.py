@@ -10,6 +10,10 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 asset_dir = ROOT / 'TienKung-Lab/legged_lab/assets/Tienkung_Dex'
+for name in ('waist_pitch_link_lower.obj', 'waist_pitch_link_upper.obj'):
+    path = asset_dir / 'mujoco/meshes_import' / name
+    if not path.is_file():
+        raise FileNotFoundError(f'Missing split torso mesh: {path}')
 urdf = ET.parse(asset_dir / 'urdf/tiangong3.urdf').getroot()
 fixed = {'head_pitch_joint', 'head_yaw_joint', 'elbow_yaw_l_joint', 'elbow_yaw_r_joint',
          'wrist_pitch_l_joint', 'wrist_pitch_r_joint', 'wrist_roll_l_joint', 'wrist_roll_r_joint'}
@@ -114,9 +118,55 @@ model.find('compiler').set('meshdir', '../meshes')
 for mesh in model.findall('asset/mesh'):
     file = Path(mesh.get('file')).name
     mesh.set('file', mesh_files.get(file, '../mujoco/meshes_import/' + file))
+
+# Preserve the shipped MuJoCo model's split torso meshes and display settings.
+# The source URDF uses a single torso mesh, so this is a MuJoCo-specific override.
+asset = model.find('asset')
+torso_mesh = next(mesh for mesh in asset.findall('mesh') if mesh.get('name') == 'waist_pitch_link')
+index = list(asset).index(torso_mesh)
+asset.remove(torso_mesh)
+for offset, (name, file, scale) in enumerate([
+    ('waist_pitch_chest', 'waist_pitch_link_lower.obj', None),
+    ('waist_pitch_neck', 'waist_pitch_link_upper.obj', '1.002 1.002 1.002'),
+]):
+    attrs = {'name': name, 'content_type': 'model/obj',
+             'file': '../mujoco/meshes_import/' + file}
+    if scale:
+        attrs['scale'] = scale
+    asset.insert(index + offset, ET.Element('mesh', attrs))
+
+torso = next(body for body in model.findall('.//body') if body.get('name') == 'waist_pitch_link')
+for kind in ('visual', 'collision'):
+    original = next(geom for geom in torso.findall('geom') if geom.get('name') == f'waist_pitch_link_{kind}_0')
+    index = list(torso).index(original)
+    torso.remove(original)
+    for offset, mesh in enumerate(('waist_pitch_chest', 'waist_pitch_neck')):
+        geom = ET.Element('geom', original.attrib.copy())
+        geom.set('name', f'waist_pitch_link_{kind}_{offset}')
+        geom.set('mesh', mesh)
+        torso.insert(index + offset, geom)
+
+light_links = {'hip_roll_l_link', 'hip_yaw_l_link', 'hip_roll_r_link',
+               'hip_yaw_r_link', 'camera_body_front_link'}
+for body in model.findall('.//body'):
+    for geom in body.findall('geom'):
+        light = body.get('name') in light_links or geom.get('mesh') == 'waist_pitch_chest'
+        geom.set('rgba', '0.55 0.55 0.55 1' if light else '0.32 0.32 0.32 1')
+
+visual = ET.Element('visual')
+ET.SubElement(visual, 'headlight', ambient='0.4 0.4 0.4', diffuse='0.45 0.45 0.45')
+model.insert(list(model).index(asset), visual)
+asset.insert(0, ET.Element('texture', type='skybox', builtin='gradient', rgb1='0.4 0.5 0.6',
+                           rgb2='0 0 0', width='512', height='3072'))
+asset.insert(1, ET.Element('texture', name='grid', type='2d', builtin='checker', width='512',
+                           height='512', rgb1='0.1 0.2 0.3', rgb2='0.2 0.3 0.4'))
+asset.insert(2, ET.Element('material', name='grid', texture='grid', texrepeat='10 10',
+                           texuniform='true', reflectance='0.2'))
 ET.SubElement(model, 'option', timestep='0.0025', integrator='implicitfast')
 world = model.find('worldbody')
-ET.SubElement(world, 'geom', name='ground', type='plane', size='10 10 0.1', friction='1 0.005 0.0001')
+ET.SubElement(world, 'light', pos='0 0 4', dir='0 0 -1', directional='true',
+              castshadow='true', diffuse='0.35 0.35 0.35', specular='0.2 0.2 0.2')
+ET.SubElement(world, 'geom', name='ground', type='plane', size='10 10 0.1', material='grid', friction='1 0.005 0.0001')
 pelvis = next(b for b in world.findall('body') if b.get('name') == 'pelvis')
 pelvis.set('pos', '0 0 0.995')
 ET.SubElement(pelvis, 'freejoint', name='pelvis_to_world_joint')
