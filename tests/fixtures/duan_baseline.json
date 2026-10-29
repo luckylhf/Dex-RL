@@ -1,5 +1,5 @@
 {
-  "note": "policy.pt / policy.onnx 为 3300 训练导出，与 Deploy_Tienkung/policy/walk_amp/model/ 下同名文件逐字节一致；工程师 3.0 原模型可从 git 历史（HEAD 的 Deploy_Tienkung/policy/walk_amp/model/）取回，旧哈希保留在 superseded 中。",
+  "note": "policy.pt / policy.onnx 为 3300 训练导出，与 Deploy_Tienkung/policy/walk_amp/model/ 下同名文件逐字节一致；工程师 3.0 原模型不在工作区，可从 git 历史取回（模型替换前的提交 26d0ee3，路径 Deploy_Tienkung/policy/walk_amp/model/），旧哈希保留在 superseded 中。",
   "source_files": {
     "policy.pt": {
       "path": "TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/exported/policy.pt",
