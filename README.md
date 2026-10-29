@@ -1,7 +1,7 @@
 # Dex-RL V4 · 天工行者 Dex 训练与部署栈
 
 **版本**: V4（训练 + Sim2Sim + ROS2 闭环部署）
-**更新日期**: 2026-10-17
+**更新日期**: 2026-10-29
 
 > **📌 原始版本来源**
 >
@@ -22,20 +22,20 @@
 
 ## 🚀 项目简介
 
-**Dex-RL V4** 是基于 TienKung-Lab 的强化学习**训练 + Sim2Sim + ROS2 闭环部署一体化包**，面向天工行者 Dex（Tienkung_Dex）人形机器人。框架结合 **AMP（Adversarial Motion Priors）** 模仿学习与**周期性步态奖励**，训练自然、稳定、可部署的行走与奔跑策略。
+**Dex-RL V4** 是基于 TienKung-Lab 的强化学习**训练 + Sim2Sim + ROS2 闭环部署一体化包**，面向天工行者 Dex（Tienkung_Dex）人形机器人。框架结合 **AMP（Adversarial Motion Priors）** 模仿学习与**周期性步态奖励**，用于训练和评估行走与奔跑策略。
 
-本包覆盖从训练到部署的完整链路：Isaac Lab 训练 → 策略回放与 PT/ONNX 导出 → 独立 MuJoCo Sim2Sim → **ROS2 Humble + MuJoCo 闭环验收**（七状态 FSM、故障阻尼停止）。过程文档与非 ROS 资产不在包内（见[📦 包边界](#-包边界)）。
+本包提供 Isaac Lab 训练、策略回放与导出、独立 MuJoCo Sim2Sim，以及 ROS2 Humble + MuJoCo 闭环仿真入口。具体验证范围见下方和[包边界](#-包边界)。
 
 > ⚠️ **范围说明：本包以 walk 的 pipeline 为主。**
 >
-> - **walk**：训练 → 导出 → 独立 MuJoCo Sim2Sim → ROS2 闭环曾完成验证，历史数据随包；步行部署增益现已对齐训练快照，修改后的配置须重新验收（见[🤖 ROS2 + MuJoCo 闭环](#-ros2--mujoco-闭环)）。
-> - **run**：**只跑通了训练通路**（4096 环境、100 迭代，产出 `model_0.pt` / `model_100.pt` 及导出的 TorchScript），未做长训练，也未对跑步步态质量做验收；包内 run 示例仅用于确认通路可跑。
+> - **walk**：当前 3300 导出模型及增益（膝 KP 330 / 肩 pitch KD 5）已进行独立 MuJoCo Sim2Sim 和 ROS2 闭环仿真，2026-10-29 结果见[🤖 ROS2 + MuJoCo 闭环](#-ros2--mujoco-闭环)；历史数据仍随包供对照。
+> - **run**：包内保留 4096 环境训练的 `model_3500.pt` 和导出策略；尚未对跑步步态质量做验收，包内 run 示例用于检查仿真通路。
 > - 若需要 run 的**训练 / 策略回放 / 独立 Sim2Sim** 这三条通路，参照 walk 的流程照做即可（把 `--task=dex_walk` 换成 `--task=dex_run`）。但 **ROS2 闭环与部署侧不接 `--task`**（`scripts/ros_closed_loop.py` 只有 `--duration` / `--policy` / `--band` / `--fault` / `--output`），仍固定加载 `walk_amp` 配置；run 要上闭环需另做部署侧适配。
 
 ### ✨ 核心特性
 
 - ✅ **AMP 模仿 + 任务奖励**: 从专家运动数据学习自然步态，`总奖励 = (1-lerp) × coef × max(1-(d-1)²/4, 0) + lerp × 任务奖励`（`d` 为判别器输出，默认 coef=0.3、lerp=0.7）
-- ✅ **站走一体**: 零速度指令下保持静止站立，不原地踏步
+- ✅ **站走一体**: 支持零速度站立和速度指令控制；运动质量以实际验证结果为准
 - ✅ **统一 400/100Hz**: 训练侧物理 `dt=0.0025 / decimation=4`，即物理 400Hz、策略 100Hz
 - ✅ **大规模并行**: 默认 4096 环境，已验证 4096 环境无头长训练
 - ✅ **独立 MuJoCo Sim2Sim**: 用 MjSpec 删除策略不控制的 6 个关节，复现训练侧 23 关节模型
@@ -134,114 +134,25 @@ ROS2 闭环的环境组合不同（需同时激活 conda 与 Humble），**不�
 | --- | --- | --- |
 | **[docs/DISCLAIMER.md](docs/DISCLAIMER.md)** | 免责声明 / Disclaimer | **使用前必读** |
 | **[docs/ROS_CLOSED_LOOP_GAP.md](docs/ROS_CLOSED_LOOP_GAP.md)** | ROS2 闭环的使用说明与验收结论 | 部署侧交接 |
-| **[TienKung-Lab/README.md](TienKung-Lab/README.md)** | 上游训练框架说明 | 算法细节补充 |
+| **[TienKung-Lab/README.md](TienKung-Lab/README.md)** | 上游训练框架说明 | 训练入口与数据准备 |
 
 ---
 
 ## 🏗️ 目录结构
 
-```
-Dex-RL/
-│
-├── TienKung-Lab/                       # 训练主体
-│   ├── legged_lab/                     # 训练框架包
-│   │   ├── assets/Tienkung_Dex/        # 本体定义与资产
-│   │   │   ├── walk.py                 # DEX_V3_CFG：行走初始姿态、执行器增益
-│   │   │   ├── run.py                  # DEX_V3_CFG：奔跑初始姿态、执行器增益
-│   │   │   ├── urdf/
-│   │   │   │   ├── tiangong3.urdf              # 源本体
-│   │   │   │   ├── tiangong3_locomotion.urdf   # 训练用派生体（头两轴 + 6 末端轴 fixed，23 关节）
-│   │   │   │   └── tiangong3_ros.urdf          # 部署用派生体（保留备查）
-│   │   │   ├── meshes/                 # STL 网格（训练资产）
-│   │   │   ├── mujoco/meshes_import/   # Sim2Sim 部署模型所需的 3 个 OBJ
-│   │   │   └── 关键参数/               # 本体参数表（CSV/PNG）
-│   │   ├── envs/
-│   │   │   ├── base/                   # BaseEnv / BaseEnvCfg 抽象
-│   │   │   └── dex/
-│   │   │       ├── dex_env.py          # DexEnv（核心环境：观测/步态相位/奖励）
-│   │   │       ├── walk_cfg.py         # 行走任务与环境配置
-│   │   │       ├── run_cfg.py          # 奔跑任务与环境配置
-│   │   │       └── datasets/
-│   │   │           ├── motion_amp_expert/      # AMP 专家轨迹（训练用 walk.txt / run.txt）
-│   │   │           └── motion_visualization/   # 可视化参考轨迹
-│   │   ├── mdp/rewards.py              # 奖励函数库
-│   │   ├── sensors/ terrains/ utils/
-│   │   └── scripts/
-│   │       ├── train.py                # 训练入口
-│   │       ├── play.py                 # 策略回放 + PT/ONNX 导出
-│   │       ├── sim2sim.py              # 独立 MuJoCo Sim2Sim
-│   │       ├── analyze_training_log.py # 训练日志分析
-│   │       ├── play_amp_animation.py   # 专家动作播放
-│   │       └── gmr_data_conversion.py  # 运动数据转换
-│   │
-│   ├── rsl_rl/                         # 上游 rsl_rl 包（含 pyproject.toml / setup.py / config/）
-│   │   └── rsl_rl/                     # 内层同名实现包
-│   │       ├── algorithms/             # ppo.py / amp_ppo.py / distillation.py
-│   │       ├── modules/                # actor_critic.py / discriminator.py / normalizer.py ...
-│   │       ├── networks/               # memory.py
-│   │       ├── storage/                # rollout_storage.py / replay_buffer.py
-│   │       ├── runners/                # on_policy_runner.py / amp_on_policy_runner.py
-│   │       ├── env/                    # vec_env.py
-│   │       └── utils/                  # motion_loader(_for_display).py
-│   │
-│   ├── shell/                          # train.sh / play.sh / sim2sim.sh
-│   ├── logs/                           # 训练产物：dex_walk（3300 次更新）/ dex_run（100 次更新）
-│   └── setup.py
-│
-├── Deploy_Tienkung/                    # rl_control：部署观测实现 + 七状态 FSM + 配对策略
-│   ├── common/                         # RobotData / ControlFlag / BasicFunction / 手柄输入 / ROS 接口
-│   ├── FSM/                            # fsm_base.py / robot_fsm.py（硬导入七状态）
-│   ├── policy/                         # 七状态策略
-│   │   ├── walk_amp/                   #   WALKAMP + model/policy.{pt,onnx} + config/walk_amp.yaml
-│   │   ├── zero/ stop/ beyondzero/     #   ZERO / STOP / BEYONDZERO
-│   │   ├── niukua/                     #   BEYONDMIMIC（含 model/niukua_evt1216.onnx）
-│   │   └── mimic/                      #   MIMIC / MIMICDEFAULT（含 out/ 网格与策略）
-│   ├── config/                         # dex_config{,_sim,_real}.yaml
-│   ├── launch/                         # sim.launch.py / real.launch.py
-│   ├── scripts/                        # detect_xbox_buttons.py
-│   ├── rl_control_node.py              # XMIGCSControlNode（ROS2 控制节点）
-│   ├── rl_control_node_sim.py          # 仿真控制入口
-│   └── package.xml setup.py setup.cfg resource/
-│
-├── xSIM_MUJOCO-main/                   # mujoco_node：xSIM MuJoCo 仿真节点
-│   ├── launch/mujoco_sim.launch.py
-│   ├── mujoco_node/                    # simulator_view_asyn.py / elastic_band.py（软链接自 scripts/）
-│   ├── scripts/                        # simulator_view_asyn.py（含六轴 HOLD 保持建模）
-│   ├── static/                         # 静态资源
-│   └── resources/                      # MuJoCo 模型（仅保留 dex_v3）
-│       └── dex_v3/                     #   Sim2Sim 与闭环使用的主模型
-│           ├── urdf/dex_v3.xml
-│           ├── meshes -> ../../../TienKung-Lab/legged_lab/assets/Tienkung_Dex/meshes
-│           └── mujoco/meshes_import -> ../../../../TienKung-Lab/.../mujoco/meshes_import
-│
-├── ros_ws/                             # colcon 工作区
-│   └── src/                            # bodyctrl_msgs（实体）
-│                                       # mujoco_node -> ../../xSIM_MUJOCO-main
-│                                       # rl_control  -> ../../Deploy_Tienkung
-│                                       # sim_joy     -> ../../sim_joy
-├── sim_joy/                            # 手柄遥操作 ROS 包（含 GUI 监视）
-├── install/ build/ log/                # colcon build 产物（由 ros_ws/src 生成）
-├── init_env.sh                         # 一键初始化 .venv 部署环境
-├── run_sim.sh / run_real.sh            # 仿真 / 真机栈启动（venv → colcon build → ros2 launch）
-├── requirements-humble.txt             # ROS / 部署侧依赖清单
-├── docs/                               # DISCLAIMER.md、ROS_CLOSED_LOOP_GAP.md、README 配图与免责声明 PDF
-├── scripts/                            # 环境与任务入口
-│   ├── ubuntu_env.sh                   # 训练侧统一环境入口
-│   ├── ubuntu_train.sh                 # 训练包装器（自动 cd 到 TienKung-Lab）
-│   ├── ubuntu_job.py                   # 后台任务（记录 PID / 日志 / 真实退出码）
-│   ├── export_policy.py                # 导出 TorchScript 并校验 ONNX 数值等价
-│   ├── sync_dex.py                     # 由源本体再派生训练/部署模型
-│   └── ros_closed_loop.py              # ROS2 + MuJoCo 闭环验收
-│
-├── tests/                              # 回归测试（91 用例）
-├── artifacts/                          # 运行记录（后台任务、ROS 日志、验收 JSON）
-├── .gitignore                          # 忽略构建产物、缓存与运行时记录
-└── README.md
-```
+| 路径 | 内容 |
+| --- | --- |
+| `TienKung-Lab/` | Isaac Lab 训练、策略回放、独立 Sim2Sim、训练产物及机器人资产 |
+| `Deploy_Tienkung/` | ROS 控制节点、状态机、策略模型与配置 |
+| `xSIM_MUJOCO-main/` | ROS MuJoCo 仿真节点及 `dex_v3` 模型 |
+| `ros_ws/src/` | ROS 消息包及指向控制、仿真、遥操作包的软链接 |
+| `sim_joy/` | 仿真遥操作与 GUI |
+| `scripts/` | 环境、训练、后台任务、导出及闭环验证入口 |
+| `tests/` | 回归测试 |
+| `artifacts/` | 测试基线与仿真报告；运行日志由程序生成 |
+| `docs/` | 使用说明、验证记录和免责声明 |
 
-> ⚠️ `dex_v3/meshes` 与 `dex_v3/mujoco/meshes_import` 是**软链接**，指向 `TienKung-Lab/legged_lab/assets/Tienkung_Dex/` 下的同名目录。移动或删除本体资产时务必一并考虑，否则 `dex_v3.xml` 加载会失败。
-
----
+`dex_v3` 模型通过软链接引用 `TienKung_Dex` 网格；移动或打包时需保留链接及其目标。`build/`、`install/`、`log/` 是本机生成的构建产物。
 
 ## 🧠 算法原理
 
@@ -281,24 +192,24 @@ Dex-RL/
 
 两者均在 `legged_lab/envs/__init__.py` 中注册，入口为 `task_registry`（非 gym / hydra），默认 `num_envs=4096`。
 
-> ⚠️ `dex_walk` 是完整验证链路；`dex_run` 目前只验证了训练通路（见上文「范围说明」），步态质量未验收。
+> `dex_run` 已进行训练和独立 Sim2Sim 通路测试，步态质量未验收。
 
 ```bash
 # 行走训练（推荐：用包装器，自动激活环境并进入 TienKung-Lab）
 bash scripts/ubuntu_train.sh --task=dex_walk --num_envs=4096 --headless \
     --logger=tensorboard --run_name=my_walk
 
-# 短冒烟：先确认通路可跑（2048 环境 × 20 迭代，几分钟内结束）
-bash scripts/ubuntu_train.sh --task=dex_walk --num_envs=2048 --max_iterations=20 --headless \
+# 短冒烟：先用 64 环境、2 迭代确认环境与入口
+bash scripts/ubuntu_train.sh --task=dex_walk --num_envs=64 --max_iterations=2 --headless \
     --logger=tensorboard --run_name=smoke
 
 # 奔跑训练：从行走检查点热启动（只迁移 actor/critic/std，AMP 判别器从头学）
 bash scripts/ubuntu_train.sh --task=dex_run --num_envs=4096 --max_iterations=101 --headless \
-    --init_from /absolute/path/to/logs/dex_walk/<run>/model_3300.pt --run_name=my_run
+    --init_from "$PWD/TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/model_3300.pt" --run_name=my_run
 
 # 断点续训（与 --init_from 互斥）
 bash scripts/ubuntu_train.sh --task=dex_walk --resume=True \
-    --load_run=<run目录名> --checkpoint=model_3300.pt
+    --load_run=2026-10-15_19-52-21_v4_walk_4096_20000 --checkpoint=model_3300.pt
 ```
 
 > 📌 包内 `TienKung-Lab/logs/` 已含两组训练产物，可直接用于上面的 `--init_from` / `--resume` 示例。注意**目录名里的迭代数是计划值**，与日志实际记录并不一致：
@@ -306,7 +217,7 @@ bash scripts/ubuntu_train.sh --task=dex_walk --resume=True \
 > | run 目录 | 计划迭代 | 日志实记（tfevents 末步） | 保留检查点 |
 > | --- | --- | --- | --- |
 > | `dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000` | 20000 | **3308**（首步 0，共 3309 条记录） | `model_3300.pt` |
-> | `dex_run/2026-10-16_15-59-00_v4_run_100it_4096` | 100 | **100**（首步 0，共 101 条记录，即 101 次更新） | `model_0.pt` / `model_100.pt` |
+> | `dex_run/2026-10-16_20-57-51_v4_run_4096_20000` | 20000 | **3537**（首步 0，共 3538 条 `Train/mean_reward` 记录） | `model_3500.pt` |
 
 ### 训练入口参数
 
@@ -424,9 +335,9 @@ python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_walk --headless \
 
 # 奔跑：必须显式提供与之匹配的 run 策略，不能用 walk 策略代替。
 # 包内已含一份导出的 run TorchScript，可直接用
-# （该 run 策略仅训练 100 迭代，用于确认通路可跑，不代表已形成合格跑步步态）：
+# （该 run 策略用于检查仿真通路，不代表跑步步态已验收）：
 python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_run --headless \
-    --policy TienKung-Lab/logs/dex_run/2026-10-16_15-59-00_v4_run_100it_4096/exported/policy.pt \
+    --policy TienKung-Lab/logs/dex_run/2026-10-16_20-57-51_v4_run_4096_20000/exported/policy.pt \
     --duration 10 --command 1.0 0 0
 ```
 
@@ -442,9 +353,7 @@ python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_run --headless \
 
 报告字段：`steps`、`simulation_seconds`、`min_pelvis_height`、`final_position`、`finite`、`collapsed`（`min_pelvis_height < 0.5` 判定）；`collapsed` 或数值非有限时进程以退出码 1 结束。
 
-> ⚠️ **`simulation_seconds` 明显小于 `--duration` 就说明进程提前退出了**：主循环里是 `if viewer: ... if not viewer.is_running(): break`，视窗一旦被关闭或失去，循环立即 `break`，而报告仍然是 `collapsed=false` / `finite=true`，**进程退出码也依然为 0**。实测一次 `--duration 60` 只跑出 `steps=532 / simulation_seconds=5.32`。所以判定"跑满"必须同时看 `simulation_seconds ≈ --duration`；只取数值、不要视窗时请显式加 `--headless`。
-
-> 📌 日志末尾那行 `Xlib: extension "NV-GLX" missing on display ":1"` **不是失败原因**，而是 viewer 关闭时的收尾信息——完整跑满 `1500/1500` 步的成功运行同样会打印它。
+> 视窗关闭可能使仿真提前结束，退出码仍可能为 0。请同时检查 `simulation_seconds` 是否接近请求时长；不需要视窗时使用 `--headless`。
 
 > 📌 判定口径：`min_pelvis_height` 只说明未倒地，**不等于速度跟踪合格**。低速（0.4 m/s）跟踪偏弱是当前已知边界。
 
@@ -516,21 +425,17 @@ python scripts/ros_closed_loop.py --duration 15 \
 - **常规**：`validation_error` / `controller_error` / `simulator_error` / `collapsed` 任一非空，或状态序列中不含 `WALKAMP` → 退出码 1
 - **故障**：须同时满足「无 `validation_error`」且「有 `controller_error`」且「`damping_stop_received` 为真」
 
-历史验收结果（2026-10-16；使用修改前的膝 KP 350、肩 pitch KD 7.5，不代表当前增益已通过验收）：
+当前配置验收（2026-10-29；包内 3300 导出 ONNX，膝 KP 330 / 肩 pitch KD 5，即 `walk_amp.yaml` 现值）：
 
 | 用例 | 退出码 | 仿真秒 | 最低骨盆 | 前向位移 | 关键字段 |
 | --- | --- | --- | --- | --- | --- |
-| 无支撑 `--duration 15` | **0** | 15.0025 | 0.95462 | 0.1322 m | `states=[WALKAMP,ZERO]`、`collapsed=false`、29 路命令 |
-| 无支撑，改用 3300 导出策略（`--policy .../exported/policy.onnx`） | **0** | 15.0025 | 0.95232 / 0.95126 | **0.1592 / 0.1831 m** | `states=[WALKAMP,ZERO]`、`collapsed=false`、29 路命令、两次独立复跑 |
-| 带支撑 `--band` | **0** | 15.0025 | 0.98680 | -0.0223 m | `external_support=true` |
-| 反馈故障 `--fault feedback` | **0** | 1.5325 | 0.95212 | 0.3074 m | `controller_error="imu sensor sample is older than 0.5 s"`、`damping_stop_received=true` |
-| 推理故障 `--fault inference` | **0** | 1.0925 | 0.95223 | 0.1517 m | `controller_error="WALKAMP inference session is unavailable"`、`damping_stop_received=true` |
+| 无支撑 `--duration 15` | **0** | 15.0025 | 0.95294 | 0.1612 m | `states=[WALKAMP,ZERO]`、`collapsed=false`、29 路命令 |
 
-> 前四行的原始报告在 `artifacts/ros_closed_loop_verify_{15s,band,fault_feedback,fault_inference}.json`，上表数值即取自这些文件（`min_pelvis_height` 与 `forward_displacement` 字段），可直接复核。
+> 原始报告：`artifacts/ros_closed_loop_gain330_20261029.json`，表中数值取自其 `min_pelvis_height` / `forward_displacement`；`controller_error` / `validation_error` / `simulator_error` 均为 `null`，启动期四组反馈新鲜度约 0.0034 秒。同增益下的独立 Sim2Sim（0.8 m/s、10 s）前向 7.63 m、最低骨盆 0.9640，见 `artifacts/walk08_gain330_20261029.json`。
 
-启动期四组反馈（leg / arm / waist / imu）新鲜度约 0.002 秒；运行期命令超龄 0 条、无 WARNING。
+历史闭环及故障注入记录使用修改前的增益，见 [ROS 闭环说明](docs/ROS_CLOSED_LOOP_GAP.md)。这些结果用于历史对照，不代表当前配置的全部工况已经重新验证。
 
-> 📌 3300 策略 15 s 只前进了 0.159 / 0.183 m（≈0.011~0.012 m/s），与上文「低速（0.4 m/s）跟踪偏弱是当前已知边界」一致：闭环通过的是**未倒地 / 状态机推得下去**的判据，**不代表速度跟踪合格**。另外这两次独立复跑的 `min_pelvis_height` 与位移并不完全相同（0.95232/0.95126、0.1592/0.1831 m），说明该验收指标**逐次有波动**，比较时请按同一口径多跑几次，不要用单次数值下结论。
+闭环通过未倒地和状态切换判据不等于速度跟踪合格；低速跟踪仍需进一步验证。
 
 ### 把闭环切到某个 checkpoint 的策略
 
@@ -552,11 +457,11 @@ model_path: /abs/path/TienKung-Lab/logs/dex_walk/<run>/exported/policy.onnx
 
 1. 确认要部署的 ONNX 由哪个 checkpoint 导出，并找到该次训练目录的 `params/env.yaml`。不要仅凭文件名推断模型与训练记录的对应关系。
 2. 在训练快照的 `scene.robot.actuators` 中读取各关节的 `stiffness`（KP）和 `damping`（KD），按 `walk_amp.yaml` 的 `joint_names` 逐项填写 `gains.kp` / `gains.kd`。训练快照使用关节名称匹配表达式；左右关节都要核对。步行 FSM 从此 YAML 读取增益，不会从 checkpoint、ONNX 或训练快照自动同步。
-3. 本包当前步行增益与 `dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/params/env.yaml` 对齐：左右膝 pitch KP 为 **330**，左右肩 pitch KD 为 **5**；左右脚踝 pitch 为 **30 / 2.5**，roll 为 **16.8 / 1.4**（KP / KD）。这说明配置数值的来源，不代表包内 ONNX 已确认由该 checkpoint 导出。
-4. 脚踝填写的是策略所用的串联关节空间增益。真机 `sim=false` 时，`common/robot_interface.py` 使用 `sptlib_python` 将并联电机反馈转换到串联关节空间；下发前用当前策略增益计算关节力矩，再转换为并联命令，保留当前策略增益，遵循工程师实测部署的处理方式。不要用 `dex_config_real.yaml` 中的全局 `ankle_kp_p` / `ankle_kd_p` 替换这条转换路径中的策略增益。仿真模式不运行此真机转换。
+3. 本包当前步行增益与 `dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/params/env.yaml` 对齐：左右膝 pitch KP 为 **330**，左右肩 pitch KD 为 **5**；左右脚踝 pitch 为 **30 / 2.5**，roll 为 **16.8 / 1.4**（KP / KD）。包内 `policy.onnx` / `policy.pt` 与该 run 的 `exported/` 下同名文件逐字节一致（ONNX sha256 `d37942c2…`），即模型与增益同源；基线记录见 `tests/fixtures/duan_baseline.json`。
+4. 脚踝填写的是策略所用的串联关节空间增益。真机 `sim=false` 时，`common/robot_interface.py` 使用 `sptlib_python` 将并联电机反馈转换到串联关节空间；下发前用当前策略增益计算关节力矩，再转换为并联命令，保留当前策略增益，沿用部署代码的处理方式。不要用 `dex_config_real.yaml` 中的全局 `ankle_kp_p` / `ankle_kd_p` 替换这条转换路径中的策略增益。仿真模式不运行此真机转换。
 5. 确认实际运行环境加载的是更新后的模型和配置：源码运行读取策略模块旁的 YAML；ROS 安装运行须核对安装环境实际加载的文件，必要时重新构建并核验。不要把 `--policy` 临时切换模型理解为同步了增益。
 
-本次步行增益对齐会同时改变 walk 的独立 Sim2Sim 和 ROS 闭环使用的增益；`dex_run` 的独立 Sim2Sim 会另从 `run.py` 覆盖增益。上面的历史仿真数据是在修改前测得，不能作为新增益或真机脚踝转换的验收结果；须对最终模型与配置重新验证。run 的 ROS 部署仍需另行适配。
+本次步行增益对齐会同时改变 walk 的独立 Sim2Sim 和 ROS 闭环使用的增益；`dex_run` 的独立 Sim2Sim 会另从 `run.py` 覆盖增益。仿真侧已按当前模型与增益复验（2026-10-29 闭环与 `artifacts/walk08_gain330_20261029.json`），上面的历史数据仅作对照；真机脚踝的串联/并联转换不在本次复验覆盖范围内。run 的 ROS 部署仍需另行适配。
 
 ### 启动仿真栈
 
@@ -602,7 +507,7 @@ tensorboard --logdir=TienKung-Lab/logs
 | --- | --- | --- |
 | `Episode_Reward/track_lin_vel_xy_exp` | 线速度跟踪 | 随迭代上升 |
 | `Episode_Reward/track_ang_vel_z_exp` | 角速度跟踪 | 随迭代上升 |
-| `Reset/episode_length` | 回合长度 | 上升并稳定 |
+| `Train/mean_episode_length` | 回合长度 | 上升并稳定 |
 | `Loss/*` | 策略/价值/判别器损失 | 不出现持续发散 |
 
 ![RL 行走训练曲线](docs/RL-walk-training.png)
@@ -661,7 +566,7 @@ python -m pytest tests -q -p no:cacheprovider     # 91 passed
 
 ## 📦 包边界
 
-本包包含**训练 + Sim2Sim + ROS2 闭环部署**的完整链路。以下内容**不在包内**：
+本包包含训练、Sim2Sim 和 ROS2 闭环仿真入口。以下内容不在包内：
 
 - **非 ROS 的 MuJoCo 备选资产**：`Tienkung_Dex/mujoco/` 下的 `meshes_convex/`、`meshes_simplify/`、`tiangong3_torq.xml`、`tiangong3_simplify.xml`，以及模型生成脚本。`scripts/sync_dex.py` 不依赖它们，可直接运行。
 - **历史样机模型**：`xSIM_MUJOCO-main/resources/` 只保留闭环使用的 `dex_v3`（`simulator_view_asyn.py` 的模型注册表同此）。
@@ -673,7 +578,7 @@ python -m pytest tests -q -p no:cacheprovider     # 91 passed
 
 ## 📄 许可证
 
-本项目采用 [BSD-3-Clause License](https://opensource.org/licenses/BSD-3-Clause) 开源。各子包保留各自许可文件：`TienKung-Lab/LICENSE`、`Deploy_Tienkung/LICENSE.txt`、`xSIM_MUJOCO-main/LICENSE`。
+各组件适用其各自的许可文件：[`TienKung-Lab/LICENSE`](TienKung-Lab/LICENSE)、[`Deploy_Tienkung/LICENSE.txt`](Deploy_Tienkung/LICENSE.txt)、[`xSIM_MUJOCO-main/LICENSE`](xSIM_MUJOCO-main/LICENSE)。本体资产的许可说明见 [资产 README](TienKung-Lab/legged_lab/assets/Tienkung_Dex/README.md#许可证)；其他组件请核对其各自的许可声明。
 
 ---
 
@@ -695,9 +600,3 @@ python -m pytest tests -q -p no:cacheprovider     # 91 passed
 ```
 
 ---
-
-<div align="center">
-  <b>🚀 开始您的天工行者 Dex 强化学习之旅!</b>
-  <br><br>
-  Made with ❤️ by Loong
-</div>

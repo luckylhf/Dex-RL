@@ -1,0 +1,14 @@
+{
+  "policy": "/home/longhongfeng/Desktop/Dex-RL/Dex-RL/Deploy_Tienkung/policy/walk_amp/model/policy.onnx",
+  "steps": 1000,
+  "simulation_seconds": 10.000000000000153,
+  "min_pelvis_height": 0.9627280773880321,
+  "final_position": [
+    7.729927045675422,
+    -2.1217646911059282,
+    0.9897150630407682
+  ],
+  "finite": true,
+  "collapsed": false,
+  "sequence": "constant"
+}

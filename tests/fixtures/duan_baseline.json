@@ -1,12 +1,21 @@
 {
+  "note": "policy.pt / policy.onnx 为 3300 训练导出，与 Deploy_Tienkung/policy/walk_amp/model/ 下同名文件逐字节一致；工程师 3.0 原模型可从 git 历史（HEAD 的 Deploy_Tienkung/policy/walk_amp/model/）取回，旧哈希保留在 superseded 中。",
   "source_files": {
     "policy.pt": {
-      "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.pt",
-      "sha256": "881ee4fd6126590a153e684767f098d8b7c821777c404d0487d0c420ea257aed"
+      "path": "TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/exported/policy.pt",
+      "sha256": "1a5116cc23d5f4b81ef13160c6e059b4cfbdcd13e09e15d30d624ccb49986ee0",
+      "superseded": {
+        "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.pt",
+        "sha256": "881ee4fd6126590a153e684767f098d8b7c821777c404d0487d0c420ea257aed"
+      }
     },
     "policy.onnx": {
-      "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.onnx",
-      "sha256": "bb5442bcc7520677374a380a1c926b57eed8f72ba438a399e4fd23785a2a3f01"
+      "path": "TienKung-Lab/logs/dex_walk/2026-10-15_19-52-21_v4_walk_4096_20000/exported/policy.onnx",
+      "sha256": "d37942c2d0d5c8137ebd540a38454fbfa33af1c7dfc7b5a061b24c874dab1a40",
+      "superseded": {
+        "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/model/policy.onnx",
+        "sha256": "bb5442bcc7520677374a380a1c926b57eed8f72ba438a399e4fd23785a2a3f01"
+      }
     },
     "walk_amp.yaml": {
       "path": "工程师实测代码/ros_dex_deploy_v0.3/src/rl_control/policy/walk_amp/config/walk_amp.yaml",

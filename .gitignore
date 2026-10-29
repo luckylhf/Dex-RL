@@ -35,6 +35,9 @@ Temporary Items
 /artifacts/ros_logs/
 /artifacts/ros_closed_loop.json
 /artifacts/policy_equivalence.json
+# 独立站立的单次运行记录，本地保留但不随包分发
+/artifacts/stand_3300_sim2sim.json
+/artifacts/stand_gain330_20261029.json
 # 注意：/artifacts/asset_cleanup_before.json 不可忽略——tests/test_dex_assets.py 会读取它
 # 例外：导出产物需随包分发，不忽略
 !/artifacts/exported_policy/
@@ -64,5 +67,14 @@ MUJOCO_LOG.TXT
 # ---------- 上游遗留的本机配置（内含他人机器路径）----------
 /TienKung-Lab/settings.json
 
+# ---------- 本机 IDE 配置 ----------
+/.vscode/
+
 # ---------- 内部审计 / 过程文档（不随包分发）----------
 /自洽性检查报告-*.md
+
+# ---------- 训练产物中的大归档与临时备份（不随包分发）----------
+# *.zip 为 logs 目录的整包归档；model_0.pt 为训练初始权重
+TienKung-Lab/logs/**/*.zip
+TienKung-Lab/logs/**/model_0.pt
+*.bak.*

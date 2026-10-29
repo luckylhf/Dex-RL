@@ -60,9 +60,21 @@ python scripts/ros_closed_loop.py --duration 15 \
 - **常规用例**：`validation_error` / `controller_error` / `simulator_error` / `collapsed` 任一非空，或状态序列中不含 `WALKAMP` → 退出码 **1**。
 - **故障用例**：须同时满足「无 `validation_error`」「有 `controller_error`」「`damping_stop_received` 为真」，否则退出码 **1**。
 
-## 5. 验收结论（2026-10-16）
+## 5. 验收结论
 
-以下是历史仿真结果，测量时的步行部署增益为膝 KP 350、肩 pitch KD 7.5；当前 YAML 已对齐训练快照（分别为 330 和 5），这些结果不构成修改后配置的验收，也不验证真机脚踝转换。
+### 当前配置（2026-10-29；包内 3300 导出 ONNX，膝 KP 330 / 肩 pitch KD 5）
+
+| 用例 | 退出码 | 仿真秒 | 最低骨盆 (m) | 前向位移 (m) | 关键字段 |
+| --- | --- | --- | --- | --- | --- |
+| 无支撑 `--duration 15` | **0** | 15.0025 | 0.95294 | 0.1612 | `states=[WALKAMP,ZERO]`、`collapsed=false`、29 路命令 |
+
+- 原始报告 `artifacts/ros_closed_loop_gain330_20261029.json`；`controller_error` / `validation_error` / `simulator_error` 均为 `null`，启动期四组反馈新鲜度约 0.0034 秒。
+- 同增益下的独立 Sim2Sim（0.8 m/s、10 s）：前向 7.63 m、最低骨盆 0.9640、`collapsed=false`，见 `artifacts/walk08_gain330_20261029.json`；与改变增益前（7.73 m / 0.9627）的差异在逐次波动范围内。
+- 本例只覆盖仿真侧；真机脚踝的串联/并联转换不在本次验收范围内。
+
+### 历史结论（2026-10-16）
+
+以下是历史仿真结果，测量时的步行部署增益为膝 KP 350、肩 pitch KD 7.5；当前 YAML 已对齐训练快照（分别为 330 和 5），这些结果仅作对照。
 
 | 用例 | 退出码 | 仿真秒 | 最低骨盆 (m) | 前向位移 (m) | 关键字段 |
 | --- | --- | --- | --- | --- | --- |

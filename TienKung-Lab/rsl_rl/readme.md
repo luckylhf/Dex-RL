@@ -1,5 +1,5 @@
 # RSL RL
-We have developed a reinforcement learning framework based on [RSL RL](https://github.com/leggedrobotics/rsl_rl), incorporating Adversarial Motion Priors (AMP). This framework is designed to enable efficient, stable, and natural walking and running behaviors for full-scale humanoid robot TienKung.
+We have developed a reinforcement learning framework based on [RSL RL](https://github.com/leggedrobotics/rsl_rl), incorporating Adversarial Motion Priors (AMP). This package provides the reinforcement learning algorithms used by the Dex training tasks. For the current models and validation scope, see the [project README](../../README.md).
 
 ## Contribution Guidelines
 

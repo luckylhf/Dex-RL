@@ -48,7 +48,7 @@
 
 ## 与全量资产包的关系
 
-本裁剪包移除了以下内容，需要时请从全量备份 `Dex-RL-integrated-20261014-V4(全量).zip` 取回：
+本裁剪包移除了以下内容，如需这些资源，请使用对应的完整资产包：
 
 - `mujoco/` 下的 `meshes_convex/`（凸包网格）、`meshes_simplify/`（减面网格）与两份 MJCF `tiangong3_torq.xml`、`tiangong3_simplify.xml`
 - 生成与校验脚本 `script/`（`check_link_and_update.py`、`check_joint_and_update.py`、`prime_to_convex.py`、`prime_to_simplify.py`、`make_mjcf_torq.py`）
@@ -60,4 +60,4 @@
 
 ## 许可证
 
-本目录的许可证正文随全量资产包交付（本裁剪包内不含 `LICENSE`）；据上游说明该目录采用 OpenAtom Open Hardware License 1.0。本仓库整体与各子包的许可证见包根 README 的「许可证」一节及 `TienKung-Lab/LICENSE`、`Deploy_Tienkung/LICENSE.txt`、`xSIM_MUJOCO-main/LICENSE`。
+本目录未包含独立的许可证正文；据上游说明该资产采用 OpenAtom Open Hardware License 1.0，使用和分发前请核对相应完整许可文本。本仓库整体与各子包的许可证见包根 README 的「许可证」一节及 `TienKung-Lab/LICENSE`、`Deploy_Tienkung/LICENSE.txt`、`xSIM_MUJOCO-main/LICENSE`。

@@ -1,6 +1,6 @@
 # sim_joy
 
-Joystick teleoperation package for Tiangong robot simulation.
+Joystick teleoperation package for Dex ROS simulation. For workspace setup and the complete simulation launch, see the [project README](../README.md#-ros2--mujoco-闭环).
 
 ## Features
 
