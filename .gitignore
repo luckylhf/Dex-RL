@@ -27,6 +27,9 @@ Temporary Items
 /previous_version_sha256.json
 /PROBLEM_STATE.md
 
+# 原始测试视频仅保留在本地
+/docs/原始测试文件.mp4
+
 # ---------- artifacts/ 运行时输出 ----------
 # 由 scripts/ubuntu_job.py、export_policy.py、ros_closed_loop.py 运行时生成：
 #   remote_runs/  远程作业记录（pid.txt / job.json / result.json / output.log）

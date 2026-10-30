@@ -56,6 +56,8 @@
 
 ### 🎬 效果预览
 
+[![Dex 行走视频预览，点击观看完整视频](docs/Dex-Walk.gif)](docs/Dex-Walk.mp4)
+
 ![Isaac Sim 中加载训练所得策略的行走回放](docs/isaacsim-walk.png)
 
 ---
