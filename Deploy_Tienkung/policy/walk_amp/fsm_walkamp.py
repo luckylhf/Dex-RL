@@ -17,6 +17,11 @@ from scipy.spatial.transform import Rotation
 class FSMStateWALKAMP(FSMState):
     """WALKAMP策略状态实现"""
 
+    HOLD_JOINTS = (
+        "elbow_yaw_l_joint", "wrist_pitch_l_joint", "wrist_roll_l_joint",
+        "elbow_yaw_r_joint", "wrist_pitch_r_joint", "wrist_roll_r_joint",
+    )
+
     def _reset_internal_state(self):
         """把所有随时间变化的内部状态重置成初始值"""
 
@@ -201,6 +206,25 @@ class FSMStateWALKAMP(FSMState):
             self.stiffness_array[mj_idx] = self.stiffness_array_seq[lab_idx]
             self.damping_array[mj_idx] = self.damping_array_seq[lab_idx]
 
+        # These six joints are fixed during training but remain motors on the
+        # deployed robot. Hold their entry pose using the existing STOP gains.
+        self.hold_indices = np.array([self.joint_xml.index(name) for name in self.HOLD_JOINTS], dtype=int)
+        if np.intersect1d(self.hold_indices, self.lab2mj).size:
+            raise ValueError("WALKAMP hold joints must not overlap policy joints")
+        stop_config_path = os.path.join(current_dir, "..", "stop", "config", "stop.yaml")
+        with open(stop_config_path, 'r') as f:
+            stop_config = yaml.safe_load(f)
+        stop_kp = np.asarray(stop_config['kp_pos'], dtype=np.float32)
+        stop_kd = np.asarray(stop_config['kd_pos'], dtype=np.float32)
+        if stop_kp.shape != (n_mj,) or stop_kd.shape != (n_mj,):
+            raise ValueError("STOP gains must match the 29 deployment joints")
+        hold_kp, hold_kd = stop_kp[self.hold_indices], stop_kd[self.hold_indices]
+        if not np.all(np.isfinite(hold_kp)) or not np.all(np.isfinite(hold_kd)) or np.any(hold_kp <= 0) or np.any(hold_kd <= 0):
+            raise ValueError("WALKAMP hold gains must be finite and positive")
+        self.stiffness_array[self.hold_indices] = hold_kp
+        self.damping_array[self.hold_indices] = hold_kd
+        self._hold_positions = np.zeros(len(self.hold_indices), dtype=np.float32)
+
 
         # 设置其他参数
         self.kps_lab = self.stiffness_array_seq
@@ -247,13 +271,12 @@ class FSMStateWALKAMP(FSMState):
         self.is_first_action_ = True
         self._warmup_inference_counter = 0
         self.timer_gait_ = 0.0
-        if self.robot_data_ is not None:
-            try:
-                self._warm_start_pose = self.robot_data_.get_joint_pos().copy()
-            except Exception:
-                self._warm_start_pose.fill(0.0)
-        else:
-            self._warm_start_pose.fill(0.0)
+        if self.robot_data_ is None:
+            raise ValueError("WALKAMP requires joint feedback to capture the hold pose")
+        self._warm_start_pose = self.robot_data_.get_joint_pos().copy()
+        if self._warm_start_pose.shape != (self.motor_num_,) or not np.isfinite(self._warm_start_pose).all():
+            raise ValueError("WALKAMP requires finite joint feedback to capture the hold pose")
+        self._hold_positions = self._warm_start_pose[self.hold_indices].copy()
 
     def run(self, flag: ControlFlag):
         """运行WALKAMP状态 - 与C++版本完全一致"""
@@ -282,6 +305,7 @@ class FSMStateWALKAMP(FSMState):
 
             # 只更新 23 个受控 DOF
             target_dof_pos_mj[self.lab2mj] = target_dof_pos_lab
+            target_dof_pos_mj[self.hold_indices] = self._hold_positions
             commanded_pos = target_dof_pos_mj
             if self._warm_start_steps > 0 and self._warmup_inference_counter < self._warm_start_steps:
                 self._warmup_inference_counter += 1

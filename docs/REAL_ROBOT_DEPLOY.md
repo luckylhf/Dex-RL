@@ -7,6 +7,7 @@
 - 机器人：天工行者 Dex，测试记录中的配置为 tg3.0 evt2 / `robot_type 4`。
 - 部署机器：x86_64 本体板（node1），Ubuntu 24.04、ROS 2 Jazzy；厂商 EtherCAT 接口、`body_control` 和 `joystick` 位于本体板。
 - 测试结果：已完成 `STOP → ZERO → WALKAMP` 真机闭环联调及真机地面行走测试；根据测试反馈，真机测试结果与设计相符，测试项目均通过。地面行走的速度、时长等具体数据未在本记录中提供。
+- 后续反馈大步行走时手腕甩动。当前代码新增了 WALKAMP 末端关节保持逻辑，已进行仿真验证；上述真机测试发生在此修改之前，新增逻辑尚未真机复验。
 - 测试包内的 `policy.onnx` 和 `walk_amp.yaml` 与当前仓库中的对应文件逐字节一致；本记录未提供实机运行时加载文件的校验值。
 
 本次使用的 `sptlib_python` 是 Python 3.12 的 x86_64 wheel；真机模式下踝关节串并联转换依赖该库。测试时 Thor（node2）为 aarch64，未提供匹配 wheel，也没有本次使用的 EtherCAT 和厂商节点，因此本次部署使用本体板。
@@ -109,6 +110,8 @@ ros2 interface show bodyctrl_msgs/msg/CmdMotorCtrl
 | 摇杆 | 输入速度指令 |
 
 当前手柄逻辑要求先发出 `gotoZERO`，`A` 才能切换到 `gotoWALKAMP`。`ZERO` 是配置的蹲姿准备位，不是直立姿态。`WALKAMP` 在零速度指令下可以保持站立；需要速度指令才能观察行走。`STOP` 锁存进入时的实测位置，若机身已下沉，会保持该时刻的姿态。
+
+当前 `WALKAMP` 会锁存进入时左右 `elbow_yaw`、`wrist_pitch`、`wrist_roll` 的实测位置，使用 `STOP` 配置中对应的保持增益（当前 KP 80 / KD 5）。策略本身仍只控制 23 个关节。首次使用该逻辑前应确认现场电机 ID 和 J6/J7 的对应关系、实际加载的代码与增益，并在可靠支撑下先核对命令和反馈；仿真结果不能替代真机复验。
 
 ## 联调问题与观察
 

@@ -29,7 +29,7 @@
 > ⚠️ **范围说明：本包以 walk 的 pipeline 为主。**
 >
 > - **walk**：当前 3300 导出模型及增益（膝 KP 330 / 肩 pitch KD 5）已进行独立 MuJoCo Sim2Sim 和 ROS2 闭环仿真，2026-10-29 结果见[🤖 ROS2 + MuJoCo 闭环](#-ros2--mujoco-闭环)；历史数据仍随包供对照。
-> - **真机 walk**：天工行者 Dex（tg3.0 evt2 / robot_type 4）已完成真机地面行走测试，测试结果与设计相符、测试项目均通过；本次部署使用 x86_64 本体板、Ubuntu 24.04 和 ROS 2 Jazzy。真机测试的速度、时长等详细数据尚未记录在本 README 中。
+> - **真机 walk**：天工行者 Dex（tg3.0 evt2 / robot_type 4）已完成真机地面行走测试，测试结果与设计相符、测试项目均通过；本次部署使用 x86_64 本体板、Ubuntu 24.04 和 ROS 2 Jazzy。后续反馈大步行走时手腕甩动；新增的六轴保持逻辑已做仿真验证，尚未进行真机复验。真机测试的速度、时长等详细数据尚未记录在本 README 中。
 > - **run**：包内保留 4096 环境训练的 `model_3500.pt` 和导出策略；尚未对跑步步态质量做验收，包内 run 示例用于检查仿真通路。
 > - 若需要 run 的**训练 / 策略回放 / 独立 Sim2Sim** 这三条通路，参照 walk 的流程照做即可（把 `--task=dex_walk` 换成 `--task=dex_run`）。但 **ROS2 闭环与部署侧不接 `--task`**（`scripts/ros_closed_loop.py` 只有 `--duration` / `--policy` / `--band` / `--fault` / `--output`），仍固定加载 `walk_amp` 配置；run 要上闭环需另做部署侧适配。
 
@@ -290,6 +290,10 @@ self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.p
 [sim2sim] locked (not commanded by policy): elbow_yaw_l_joint, wrist_pitch_l_joint, wrist_roll_l_joint, ...
 ```
 
+正常 `WALKAMP` 下，ROS + MuJoCo 闭环与真机部署使用同一份控制代码：对这 6 个末端关节锁存进入状态时的实测位置，以 `STOP` 配置中对应关节的 KP/KD 进行保持（当前分别为 80 / 5），目标速度和前馈力矩均为 0；重新进入时重新锁存。两边的命令生成逻辑和增益相同，但各自锁存的角度取决于当时的反馈，物理响应也不一定相同。其余 23 关节仍由策略控制。该保持逻辑已在仿真验证，尚待真机复验；部署前需核对现场电机映射、配置及实际命令。
+
+ROS 仿真器还保留了零增益特殊处理：这 6 轴收到未超时的 `KP=0、KD=0` 命令时，仿真器内部使用 `KP=80、KD=5、目标位置=0` 模拟保持。正常 `WALKAMP` 现在发送非零增益，不走该分支；真机驱动收到零增益时的实际行为尚待确认，不能假定与仿真相同。独立 Sim2Sim 则如上所述直接固定这 6 轴，不使用这套保持命令。
+
 ---
 
 ## 🎮 策略回放（play）
@@ -430,13 +434,15 @@ python scripts/ros_closed_loop.py --duration 15 \
 - **常规**：`validation_error` / `controller_error` / `simulator_error` / `collapsed` 任一非空，或状态序列中不含 `WALKAMP` → 退出码 1
 - **故障**：须同时满足「无 `validation_error`」且「有 `controller_error`」且「`damping_stop_received` 为真」
 
-当前配置验收（2026-10-29；包内 3300 导出 ONNX，膝 KP 330 / 肩 pitch KD 5，即 `walk_amp.yaml` 现值）：
+2026-10-29 仿真记录（包内 3300 导出 ONNX，膝 KP 330 / 肩 pitch KD 5；该次早于新增末端关节保持逻辑）：
 
 | 用例 | 退出码 | 仿真秒 | 最低骨盆 | 前向位移 | 关键字段 |
 | --- | --- | --- | --- | --- | --- |
 | 无支撑 `--duration 15` | **0** | 15.0025 | 0.95294 | 0.1612 m | `states=[WALKAMP,ZERO]`、`collapsed=false`、29 路命令 |
 
 > 原始报告：`artifacts/ros_closed_loop_gain330_20261029.json`，表中数值取自其 `min_pelvis_height` / `forward_displacement`；`controller_error` / `validation_error` / `simulator_error` 均为 `null`，启动期四组反馈新鲜度约 0.0034 秒。同增益下的独立 Sim2Sim（0.8 m/s、10 s）前向 7.63 m、最低骨盆 0.9640，见 `artifacts/walk08_gain330_20261029.json`。
+
+2026-10-30 新增末端关节保持后，在 Ubuntu 22.04 / Humble 临时副本复跑无支撑闭环：仿真 15.0025 秒、最低骨盆 0.94965 m、前向位移 0.17562 m，状态含 `ZERO` / `WALKAMP`，收到 29 路命令且未报错。推理故障注入检查也收到阻尼停止命令；这两项是仿真结果。
 
 历史闭环及故障注入记录使用修改前的增益，见 [ROS 闭环说明](docs/ROS_CLOSED_LOOP_GAP.md)。这些结果用于历史对照，不代表当前配置的全部工况已经重新验证。
 
@@ -562,13 +568,13 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests -q -p no:cacheprovider
 
 禁用 pytest 插件自动加载可避免新版本 pytest 与 Humble 的 `launch_testing` 插件不兼容；需要该插件的其他测试应使用其兼容的测试环境。
 
-覆盖范围（15 个测试文件）：
+覆盖范围（16 个测试文件）：
 
 - **训练侧**：`test_training_entry.py`（入口 CLI / 退出码 / 依赖钉扎）、`test_dex_assets.py`（本体资产与任务注册）、`test_rewards_compat.py`（奖励新旧 API 兼容）、`test_observations.py`（独立 MuJoCo 与部署观测逐帧一致）
-- **ROS / 部署侧**：`test_ros_closed_loop.py`、`test_ros_lifecycle.py`、`test_ros_packaging.py`、`test_pd_hold.py`、`test_simulator_timing.py`、`test_mimic_debug_timing.py`、`test_entry_consistency.py`、`test_regressions.py`
+- **ROS / 部署侧**：`test_ros_closed_loop.py`、`test_ros_lifecycle.py`、`test_ros_packaging.py`、`test_pd_hold.py`、`test_walk_hold.py`、`test_simulator_timing.py`、`test_mimic_debug_timing.py`、`test_entry_consistency.py`、`test_regressions.py`
 - **工具链**：`test_export_default.py`（策略导出默认值）、`test_ubuntu_jobs.py`（后台任务入口）、`test_sync_dex.py`（资产同步后模型一致性）
 
-2026-10-30 检查：在 Ubuntu 22.04 / Humble 临时测试副本中补入该测试所需的 walk 训练配置快照后，完整回归测试 **93 项通过**。真机精简副本默认不含此快照，直接运行完整回归会因缺少文件失败。
+2026-10-30 检查：在 Ubuntu 22.04 / Humble 临时测试副本中补入该测试所需的 walk 训练配置快照后，新增末端保持逻辑的完整回归测试 **95 项通过**。真机精简副本默认不含此快照，直接运行完整回归会因缺少文件失败。
 
 ---
 
