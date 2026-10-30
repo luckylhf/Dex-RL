@@ -1,7 +1,7 @@
 # Dex-RL V4 · 天工行者 Dex 训练与部署栈
 
 **版本**: V4（训练 + Sim2Sim + ROS2 闭环部署）
-**更新日期**: 2026-10-29
+**更新日期**: 2026-10-30
 
 > **📌 原始版本来源**
 >
@@ -24,11 +24,12 @@
 
 **Dex-RL V4** 是基于 TienKung-Lab 的强化学习**训练 + Sim2Sim + ROS2 闭环部署一体化包**，面向天工行者 Dex（Tienkung_Dex）人形机器人。框架结合 **AMP（Adversarial Motion Priors）** 模仿学习与**周期性步态奖励**，用于训练和评估行走与奔跑策略。
 
-本包提供 Isaac Lab 训练、策略回放与导出、独立 MuJoCo Sim2Sim，以及 ROS2 Humble + MuJoCo 闭环仿真入口。具体验证范围见下方和[包边界](#-包边界)。
+本包提供 Isaac Lab 训练、策略回放与导出、独立 MuJoCo Sim2Sim，以及 ROS2 + MuJoCo 闭环仿真和真机部署入口。具体验证范围见下方和[包边界](#-包边界)。
 
 > ⚠️ **范围说明：本包以 walk 的 pipeline 为主。**
 >
 > - **walk**：当前 3300 导出模型及增益（膝 KP 330 / 肩 pitch KD 5）已进行独立 MuJoCo Sim2Sim 和 ROS2 闭环仿真，2026-10-29 结果见[🤖 ROS2 + MuJoCo 闭环](#-ros2--mujoco-闭环)；历史数据仍随包供对照。
+> - **真机 walk**：天工行者 Dex（tg3.0 evt2 / robot_type 4）已完成真机地面行走测试，测试结果与设计相符、测试项目均通过；本次部署使用 x86_64 本体板、Ubuntu 24.04 和 ROS 2 Jazzy。真机测试的速度、时长等详细数据尚未记录在本 README 中。
 > - **run**：包内保留 4096 环境训练的 `model_3500.pt` 和导出策略；尚未对跑步步态质量做验收，包内 run 示例用于检查仿真通路。
 > - 若需要 run 的**训练 / 策略回放 / 独立 Sim2Sim** 这三条通路，参照 walk 的流程照做即可（把 `--task=dex_walk` 换成 `--task=dex_run`）。但 **ROS2 闭环与部署侧不接 `--task`**（`scripts/ros_closed_loop.py` 只有 `--duration` / `--policy` / `--band` / `--fault` / `--output`），仍固定加载 `walk_amp` 配置；run 要上闭环需另做部署侧适配。
 
@@ -41,8 +42,9 @@
 - ✅ **独立 MuJoCo Sim2Sim**: 用 MjSpec 删除策略不控制的 6 个关节，复现训练侧 23 关节模型
 - ✅ **七状态部署 FSM 随包**: `Deploy_Tienkung/policy/` 六个策略目录提供 `STOP` / `ZERO` / `WALKAMP` / `BEYONDZERO` / `BEYONDMIMIC` / `MIMIC` / `MIMICDEFAULT` 七状态；其中 `WALKAMP`（`walk_amp/model/policy.{pt,onnx}`）、`BEYONDMIMIC`（`niukua/model/*.onnx`）、`MIMIC`（`mimic/out/policy_merged.onnx`）带模型，`STOP` / `ZERO` / `BEYONDZERO` 为保持类实现，不需要策略文件
 - ✅ **ROS2 + MuJoCo 闭环**: 四包 colcon 工作区，控制节点与 xSIM 仿真节点经 DDS 闭环，含反馈/推理故障注入下的阻尼停止验收
+- ✅ **真机行走测试**: 已在天工行者 Dex 真机完成地面行走测试，部署环境为 x86_64 本体板、Ubuntu 24.04 和 ROS 2 Jazzy
 - ✅ **断点续训 / 权重热启动**: `--resume` 精确续训，`--init_from` 只迁移 actor/critic/std
-- ✅ **自包含回归测试**: 训练侧 22 个用例不依赖包外代码
+- ✅ **回归测试**: 覆盖训练入口、模型资产、仿真与 ROS 部署；完整测试需要包内训练快照和相应运行环境
 
 ### 🎯 适用场景
 
@@ -66,17 +68,17 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| **操作系统** | Ubuntu 22.04 LTS |
+| **操作系统** | 训练及仿真验证环境：Ubuntu 22.04 LTS；真机本体板：Ubuntu 24.04 |
 | **GPU** | NVIDIA RTX 30 系列及以上，显存 16G 及以上。⚠️ 要按**空闲**显存判断：4096 环境实测约 14.5G，而桌面与常驻进程会先占掉 2~3G（16G 卡空闲常只剩 12~13G），此时降到 `--num_envs=2048` 可正常跑，迭代约 13.5 s/次 |
 | **内存** | 32GB+（4096 环境实测充足） |
 | **磁盘** | 512GB+ SSD |
-| **ROS2** | Humble（仅闭环与部署需要；训练与 Sim2Sim 不依赖） |
+| **ROS2** | 仿真闭环：Humble；本次真机部署：Jazzy（训练与独立 Sim2Sim 不依赖 ROS2） |
 
 ---
 
 ## 📦 环境
 
-本包默认复用**既有**的 Isaac Lab 环境与系统 ROS2，不做安装或版本变更（全新环境的安装路径见下「🆕 全新环境（从零开始）」）。已验证环境：
+训练与仿真默认复用**既有**的 Isaac Lab 环境与系统 ROS2，不做安装或版本变更（全新环境的安装路径见下「🆕 全新环境（从零开始）」）。下表为 Ubuntu 22.04 训练与仿真的已验证环境；真机本体板环境见[真机部署记录](docs/REAL_ROBOT_DEPLOY.md)：
 
 | 组件 | 版本 |
 | --- | --- |
@@ -113,7 +115,7 @@ bash scripts/ubuntu_env.sh python -m pip install --no-deps -e TienKung-Lab/rsl_r
 >
 > 用 `--no-deps`：这两步只做**本地绑定**，依赖全部由 Isaac Lab 环境提供，无需 pip 再解析一遍。不加 `--no-deps` 时 pip 会读取 `TienKung-Lab/setup.py` 的 `install_requires`（`IsaacLab`、`pynput`、`mujoco==3.3.2`、`matplotlib`），其中 `IsaacLab` 在 PyPI 上可能匹配到无关同名包而污染环境，或解析失败直接中断安装。`--no-deps` 写在 `-e` 之前或之后均可。
 
-与上游说明一致（见 [`TienKung-Lab/README.md`](TienKung-Lab/README.md) 的 Installation 一节）。装完确认绑定来源指向**本包**而非别处同名目录：
+装完确认绑定来源指向**本包**而非别处同名目录：
 
 ```bash
 bash scripts/ubuntu_env.sh python -c \
@@ -136,6 +138,7 @@ ROS2 闭环的环境组合不同（需同时激活 conda 与 Humble），**不�
 | --- | --- | --- |
 | **[docs/DISCLAIMER.md](docs/DISCLAIMER.md)** | 免责声明 / Disclaimer | **使用前必读** |
 | **[docs/ROS_CLOSED_LOOP_GAP.md](docs/ROS_CLOSED_LOOP_GAP.md)** | ROS2 闭环的使用说明与验收结论 | 部署侧交接 |
+| **[docs/REAL_ROBOT_DEPLOY.md](docs/REAL_ROBOT_DEPLOY.md)** | 真机部署环境、联调记录与常见问题 | 真机部署参考 |
 | **[TienKung-Lab/README.md](TienKung-Lab/README.md)** | 上游训练框架说明 | 训练入口与数据准备 |
 
 ---
@@ -149,7 +152,7 @@ ROS2 闭环的环境组合不同（需同时激活 conda 与 Humble），**不�
 | `xSIM_MUJOCO-main/` | ROS MuJoCo 仿真节点及 `dex_v3` 模型 |
 | `ros_ws/src/` | ROS 消息包及指向控制、仿真、遥操作包的软链接 |
 | `sim_joy/` | 仿真遥操作与 GUI |
-| `scripts/` | 环境、训练、后台任务、导出及闭环验证入口 |
+| `scripts/` | 环境、训练、后台任务、导出、闭环验证及真机测试入口 |
 | `tests/` | 回归测试 |
 | `artifacts/` | 测试基线与仿真报告；运行日志由程序生成 |
 | `docs/` | 使用说明、验证记录和免责声明 |
@@ -471,7 +474,7 @@ model_path: /abs/path/TienKung-Lab/logs/dex_walk/<run>/exported/policy.onnx
 
 ```bash
 source /opt/ros/humble/setup.bash && source install/setup.bash
-# 整栈：MuJoCo 仿真 + sim_joy GUI + 控制节点（真机栈用 real.launch.py）
+# 整栈：MuJoCo 仿真 + sim_joy GUI + 控制节点
 ros2 launch rl_control sim.launch.py
 # 下面两条只在「单独启动某个组件」时使用，与 sim.launch.py 同时跑会重复启动
 ros2 launch mujoco_node mujoco_sim.launch.py    # 只起 MuJoCo 仿真节点
@@ -481,8 +484,8 @@ ros2 launch sim_joy teleop_joy.launch.py        # 只起手柄遥操作（Tk GUI
 方式二，用包装脚本（**首次必须先跑 `init_env.sh`**；`run_sim.sh` 检测不到 `.venv` 会直接报错退出，它自己只做 `colcon build` → `source install` → `ros2 launch`）：
 
 ```bash
-./init_env.sh     # 首次：创建 .venv，安装 requirements-humble.txt / requirements_22.txt
-./run_sim.sh      # 仿真栈；真机栈用 ./run_real.sh
+./init_env.sh     # 首次：创建 .venv，安装对应 ROS 版本的部署依赖和本地 sptlib wheel
+./run_sim.sh      # 仿真栈；本次真机联调入口见 docs/REAL_ROBOT_DEPLOY.md
 ```
 
 > `.venv` 路线与上文「系统 Humble + `env_isaaclab`」是两套独立环境，按需选一套即可。
@@ -549,20 +552,23 @@ python3 scripts/ubuntu_job.py my_walk_4096 bash scripts/ubuntu_train.sh \
 
 ## ✅ 回归测试
 
-含 ROS 侧用例（`bodyctrl_msgs`）的文件需先 source install：
+完整测试需要完整训练包（包括 `TienKung-Lab/logs/` 中的训练快照）、Isaac Lab 环境及构建后的 ROS 消息包。真机精简副本不包含训练日志，因此不能直接运行依赖训练快照的全部用例。以下为 Humble 环境示例：
 
 ```bash
+source ~/miniconda3/etc/profile.d/conda.sh && conda activate env_isaaclab
 source /opt/ros/humble/setup.bash && source install/setup.bash
-python -m pytest tests -q -p no:cacheprovider     # 91 passed
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests -q -p no:cacheprovider
 ```
 
-覆盖范围（14 个文件）：
+禁用 pytest 插件自动加载可避免新版本 pytest 与 Humble 的 `launch_testing` 插件不兼容；需要该插件的其他测试应使用其兼容的测试环境。
+
+覆盖范围（15 个测试文件）：
 
 - **训练侧**：`test_training_entry.py`（入口 CLI / 退出码 / 依赖钉扎）、`test_dex_assets.py`（本体资产与任务注册）、`test_rewards_compat.py`（奖励新旧 API 兼容）、`test_observations.py`（独立 MuJoCo 与部署观测逐帧一致）
 - **ROS / 部署侧**：`test_ros_closed_loop.py`、`test_ros_lifecycle.py`、`test_ros_packaging.py`、`test_pd_hold.py`、`test_simulator_timing.py`、`test_mimic_debug_timing.py`、`test_entry_consistency.py`、`test_regressions.py`
-- **工具链**：`test_export_default.py`（策略导出默认值）、`test_ubuntu_jobs.py`（后台任务入口）
+- **工具链**：`test_export_default.py`（策略导出默认值）、`test_ubuntu_jobs.py`（后台任务入口）、`test_sync_dex.py`（资产同步后模型一致性）
 
-> 当前共 **91 项、0 失败**。
+2026-10-30 检查：在 Ubuntu 22.04 / Humble 临时测试副本中补入该测试所需的 walk 训练配置快照后，完整回归测试 **93 项通过**。真机精简副本默认不含此快照，直接运行完整回归会因缺少文件失败。
 
 ---
 

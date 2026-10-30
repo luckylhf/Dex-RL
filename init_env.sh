@@ -89,13 +89,20 @@ pip install --force-reinstall --no-deps "${sptlib_wheels[0]}"
 # ---- 验证关键 import ----
 python - <<'PY'
 import importlib, sys
-mods = ['numpy', 'scipy', 'mujoco', 'onnxruntime', 'yaml', 'transforms3d', 'pynput', 'inputs', 'tkinter']
+mods = ['numpy', 'scipy', 'mujoco', 'onnxruntime', 'yaml', 'transforms3d', 'inputs', 'tkinter']
 missing = []
 for m in mods:
     try:
         importlib.import_module(m)
     except Exception as e:
         missing.append(f"{m}: {e}")
+try:
+    importlib.import_module('pynput')
+except Exception as e:
+    if isinstance(e, ImportError) and 'failed to acquire X connection' in str(e):
+        print('[init_env] 注意：pynput 无法连接 X 显示；joystick 真机控制可继续，图形输入需先配置显示环境。', file=sys.stderr)
+    else:
+        missing.append(f"pynput: {e}")
 try:
     from sptlib_python import funcSPTrans  # noqa: F401
 except Exception as e:

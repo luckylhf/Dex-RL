@@ -6,11 +6,11 @@
 
 当前步行策略使用 `policy/walk_amp/model/policy.onnx` 和 `policy/walk_amp/config/walk_amp.yaml`。ROS 部署模型有 29 路执行器，步行策略控制其中 23 个关节。`dex_run` 的 ROS 闭环尚需单独适配；包含其他状态或模型不代表其运动已经验收。MIMIC 自由运动未通过此前验证。
 
-包内步行模型及 YAML 增益对应 3300 步行训练记录。切换模型时，须按对应训练快照核对各关节 KP/KD；更换模型不会自动更换增益。脚踝使用串联关节空间增益，真机转换依赖 `sptlib_python`；当前模型与增益尚未完成真机运动验收。详情见[步行模型部署说明](../README.md#步行模型部署时的-kpkd-和脚踝转换)。
+包内步行模型及 YAML 增益对应 3300 步行训练记录。切换模型时，须按对应训练快照核对各关节 KP/KD；更换模型不会自动更换增益。脚踝使用串联关节空间增益，真机转换依赖 `sptlib_python`。已完成真机地面行走测试，测试结果与设计相符；测试包与当前包内模型和增益文件一致，实机运行时加载文件的校验值未记录。详情见[步行模型部署说明](../README.md#步行模型部署时的-kpkd-和脚踝转换)和[真机部署记录](../docs/REAL_ROBOT_DEPLOY.md)。
 
 ## 仿真入口
 
-在项目根目录完成构建并加载 ROS 环境后，使用 `ros2 launch rl_control sim.launch.py`，或通过根目录的 `./run_sim.sh` 启动。请勿同时重复启动整栈和其中的单独节点。`./run_real.sh` 是真机启动入口；实际使用前需按机器人现场环境完成适配与验证。
+在项目根目录完成构建并加载 ROS 环境后，使用 `ros2 launch rl_control sim.launch.py`，或通过根目录的 `./run_sim.sh` 启动。请勿同时重复启动整栈和其中的单独节点。本次真机联调采用分步启动脚本，环境、控制权切换和注意事项见[真机部署记录](../docs/REAL_ROBOT_DEPLOY.md)。
 
 ## 手柄操作
 
@@ -31,10 +31,14 @@ xMIGCS支持标准云卓手柄控制，开始使用前先确保所有键都回�
 | 切入策略按钮组合| 策略内使用按键 | 对应状态 | 功能说明 |
 |------------|----------------|--------------|-------------|
 |   所有键(拨中)   |         D      | gotoZERO     | 回到零位状态  |
-|   所有键(拨中)   |         A      | gotoWALKAMP      | WALKAMP策略状态  |
-|   E(上拨)   |         A      | gotoBEYONDMIMIC   | BEYONDMIMIC策略状态   |
-|   E(上拨)   |         D      | gotoBEYONDZERO   | BEYONDMIMIC零位状态   |
+|   所有拨杆回中   |         先 D，再按 A      | gotoWALKAMP      | WALKAMP 策略状态；A 需在 `gotoZERO` 命令之后按下 |
+|   E=1（仿真手柄映射为下拨）   |         A      | gotoBEYONDMIMIC   | BEYONDMIMIC 策略状态   |
+|   E=1（仿真手柄映射为下拨）   |         D      | gotoBEYONDZERO   | BEYONDMIMIC 准备状态   |
+|   F=1（仿真手柄映射为下拨）   |         长按 A      | gotoMIMIC   | MIMIC 策略状态 |
+|   F=1（仿真手柄映射为下拨）   |         D      | gotoMIMICDEFAULT   | MIMIC 默认姿态 |
 |   F(上拨)   |         无      | 手柄控制失能，只有停止键可用      | |
+
+拨杆上下方向应结合现场手柄的实际轴值核对；上表中的 E/F 数值条件以控制代码为准。其他策略状态的映射存在不代表其真机运动已经验收。
 
 ##### 基础运动控制
 

@@ -2,7 +2,7 @@
 
 本目录包含基于 Isaac Lab 和 RSL RL 的 Dex 运动策略训练、回放和 MuJoCo Sim2Sim 代码。当前注册的任务是 `dex_walk` 和 `dex_run`；训练模型控制 23 个关节，物理频率 400 Hz、策略频率 100 Hz。
 
-环境准备、训练命令、检查点及完整使用流程见[项目 README](../README.md)。本包的 walk 策略已进行独立 MuJoCo 和 ROS 闭环仿真验证；run 策略已进行独立 Sim2Sim 通路测试，步态质量尚未验收。当前模型尚未完成真机运动验收。
+环境准备、训练命令、检查点及完整使用流程见[项目 README](../README.md)。本包的 walk 策略已进行独立 MuJoCo 和 ROS 闭环仿真验证，并已完成真机地面行走测试，测试结果与设计相符；run 策略已进行独立 Sim2Sim 通路测试，步态质量尚未验收。真机测试环境和部署记录见[真机部署说明](../docs/REAL_ROBOT_DEPLOY.md)。
 
 ## 主要入口
 
