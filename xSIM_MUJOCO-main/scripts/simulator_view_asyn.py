@@ -707,7 +707,7 @@ class RobotSimulator:
         if n > 3:
             self.cmd_vel_x = axes[2]
             self.cmd_vel_y = axes[3]
-            self.cmd_turn = axes[1]
+            self.cmd_turn = axes[0]
 
         # A 键：axes[8] 按下即触发 simulation_started
         a_pressed = n > 8 and axes[8] > 0.5
