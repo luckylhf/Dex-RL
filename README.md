@@ -281,7 +281,7 @@ self.save(os.path.join(self.log_dir, f"model_{self.current_learning_iteration}.p
 | 动作标准差下限 | `min_normalized_std=[0.05]*23` | 两者一致 |
 | 训练关节数 | **23**（头两轴与 6 个末端轴 fixed） | `urdf/tiangong3_locomotion.urdf` |
 | 初始骨盆高度 | **0.995 m** | `assets/Tienkung_Dex/{walk,run}.py` |
-| 每脚碰撞圆柱 | **7 个**，Isaac 导入 `replace_cylinders_with_capsules=False` | 本体配置 |
+| 脚底碰撞体 | 每脚 **7 根胶囊**。Isaac Lab 从 URDF 导入时启用 `replace_cylinders_with_capsules=True`，MuJoCo 直接使用原生 `capsule` | `assets/Tienkung_Dex/{walk,run}.py`、`dex_v3.xml` |
 | MuJoCo 部署模型 | `xSIM_MUJOCO-main/resources/dex_v3/urdf/dex_v3.xml`（29 路执行器） | Sim2Sim |
 
 **关于 23 与 29 的差异**：训练本体只驱动 23 个关节；部署侧模型保留 29 路执行器。`sim2sim.py` 启动时用 `MjSpec` 删除策略不控制的 6 个关节（`elbow_yaw` / `wrist_pitch` / `wrist_roll` 左右各 3）及其 `motor_*` 与传感器，使独立 MuJoCo 与训练侧一致，并在日志打印：
