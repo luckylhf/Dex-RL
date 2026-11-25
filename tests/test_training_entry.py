@@ -99,6 +99,29 @@ exec bash "$1" "$2" -c 'print("ACTIVE_ENV_OK")'
     assert result.stdout.strip() == 'ACTIVE_ENV_OK'
 
 
+def test_environment_entry_prefers_both_local_training_packages(tmp_path):
+    for package in ('legged_lab', 'rsl_rl'):
+        old_package = tmp_path / package
+        old_package.mkdir()
+        (old_package / '__init__.py').touch()
+    probe = (
+        'import importlib.util, json, sys; '
+        'print(json.dumps([importlib.util.find_spec(name).origin '
+        'for name in ("legged_lab", "rsl_rl")] + sys.path))'
+    )
+    result = subprocess.run(
+        ['bash', str(ROOT / 'scripts/ubuntu_env.sh'), sys.executable, '-c', probe],
+        cwd=tmp_path, capture_output=True, text=True,
+        env=dict(os.environ, PYTHONPATH=str(tmp_path),
+                 CONDA_PREFIX=str(Path.home() / 'miniconda3/envs/env_isaaclab')),
+    )
+    assert result.returncode == 0, result.stderr
+    legged_lab, rsl_rl, *search_path = json.loads(result.stdout)
+    assert Path(legged_lab).resolve() == ROOT / 'TienKung-Lab/legged_lab/__init__.py'
+    assert Path(rsl_rl).resolve() == ROOT / 'TienKung-Lab/rsl_rl/rsl_rl/__init__.py'
+    assert str(tmp_path) in search_path
+
+
 def test_ubuntu_deployment_pins_match_the_verified_base_environment():
     pins = []
     for name in ['requirements-humble.txt', 'Deploy_Tienkung/requirements_22.txt']:

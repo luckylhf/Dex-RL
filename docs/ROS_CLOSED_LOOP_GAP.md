@@ -9,7 +9,7 @@
 
 - **ROS 2 Humble**：仅闭环与部署需要；训练与独立 Sim2Sim 不依赖。
 - **conda 环境** `env_isaaclab`（Python 3.10）。
-- 闭环**必须同时**具备 conda 与 Humble，不能用 `scripts/ubuntu_env.sh` 代劳。
+- 闭环需要同时加载 Humble、已构建的 ROS 工作区和 conda 环境。
 - 所有命令的工作目录为**包根**，`build/` `install/` `log/` 均落在包根下。
 
 包含四个包：`bodyctrl_msgs`（ament_cmake，自定义消息）、`rl_control`（部署侧 `Deploy_Tienkung`）、`mujoco_node`（`xSIM_MUJOCO-main`）、`sim_joy`（手柄与 GUI）。`ros_ws/src/` 中后三个是指向包根同名目录的软链接，与训练侧共用同一份代码。
@@ -34,16 +34,16 @@ source install/setup.bash
 ## 3. 运行闭环验收
 
 ```bash
-source ~/miniconda3/etc/profile.d/conda.sh && conda activate env_isaaclab
 source /opt/ros/humble/setup.bash
 source install/setup.bash
-python scripts/ros_closed_loop.py --duration 15 \
+bash scripts/ubuntu_env.sh python scripts/ros_closed_loop.py --duration 15 \
     --output artifacts/ros_closed_loop.json
 ```
 
 | 参数 | 说明 |
 | --- | --- |
 | `--duration` | 仿真时长（秒），默认 `12` |
+| `--walk-speed` | 中间三分之一的前向指令（m/s），默认 0.4。前、后两段为零指令 |
 | `--policy` | 显式指定候选 ONNX；不覆盖包内默认模型 |
 | `--band` | 带外部支撑的**仅传输**测试，不是步态验收 |
 | `--fault feedback` / `--fault inference` | 注入一处故障，验证**仅阻尼停止**（须收到 `kp=0` / `kd=1`） |

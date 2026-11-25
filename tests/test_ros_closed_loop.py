@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def run_harness(tmp_path, monkeypatch):
-    def run(mode='advancing', fail_control=False):
+    def run(mode='advancing', fail_control=False, walk_speed=None):
         events = []
         wall = [3.0]  # constructor snapshot is already three seconds old
         state = ['STOP']
@@ -103,7 +103,10 @@ def run_harness(tmp_path, monkeypatch):
             def join(self, timeout):
                 events.append('join')
         output = tmp_path / 'result.json'
-        monkeypatch.setattr(sys, 'argv', ['ros_closed_loop.py', '--duration', '1.2', '--output', str(output)])
+        arguments = ['ros_closed_loop.py', '--duration', '1.2', '--output', str(output)]
+        if walk_speed is not None:
+            arguments.extend(['--walk-speed', str(walk_speed)])
+        monkeypatch.setattr(sys, 'argv', arguments)
         path = ROOT / 'scripts/ros_closed_loop.py'
         # Only imports are replaced; execute the actual startup, checks, report and cleanup.
         tree = ast.parse(path.read_text())
@@ -148,7 +151,17 @@ def test_harness_samples_before_control_and_zero_before_physics(run_harness):
     assert 'WALKAMP' in report['states']
     assert report['simulation_seconds'] >= 1.2
     assert report['forward_displacement'] > 0
+    assert report['walk_speed_mps'] == 0.4
     assert all(0 <= age < 0.1 for age in report['startup_feedback_age_seconds'].values())
+
+
+def test_harness_commands_walking_speed_only_in_middle_phase(run_harness):
+    report, _, status = run_harness(walk_speed=0.8)
+    assert status == 0
+    assert report['walk_speed_mps'] == 0.8
+    assert report['phase_forward_displacement_m'] == pytest.approx(
+        {'stand': 0.0, 'walk': 0.8 * 0.4, 'stop': 0.0},
+    )
 
 
 def test_harness_keeps_physics_paused_after_control_start_failure(run_harness):

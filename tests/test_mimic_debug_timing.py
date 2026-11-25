@@ -34,6 +34,7 @@ def test_100hz_mimic_debug_keeps_50fps_reference_duration(npz):
 def test_mimic_debug_reset_uses_approved_initial_height():
     sim = MODULE['MujocoSim2Sim'].__new__(MODULE['MujocoSim2Sim'])
     sim.model = mujoco.MjModel.from_xml_path(str(ROOT / 'xSIM_MUJOCO-main/resources/dex_v3/urdf/dex_v3.xml'))
+    assert sim.model.qpos0[2] == 0.995
     sim.data = mujoco.MjData(sim.model)
     sim.last_action = np.zeros(29)
     sim.teleop_stream = sim.motion_library = None
@@ -48,5 +49,3 @@ def test_mimic_debug_reset_uses_approved_initial_height():
     sim.reset()
     assert sim.data.qpos[2] == 0.995
     assert sim.reference_outputs[0]['body_pos_w'][0, 2] == 0.9
-    legacy = mujoco.MjModel.from_xml_path(str(ROOT / 'Deploy_Tienkung/policy/mimic/out/dex_evt/urdf/evt2.xml'))
-    assert legacy.qpos0[2] == 0.995

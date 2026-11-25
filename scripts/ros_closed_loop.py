@@ -23,11 +23,14 @@ from simulator_view_asyn import RobotSimulator
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--duration', type=float, default=12)
+parser.add_argument('--walk-speed', type=float, default=0.4, help='Forward command in m/s during the middle third')
 parser.add_argument('--policy', type=Path, help='Explicit candidate ONNX; does not overwrite the default model')
 parser.add_argument('--band', action='store_true', help='Transport-only test with external support; not a gait acceptance test')
 parser.add_argument('--fault', choices=['feedback', 'inference'], help='Inject one failure and verify damping-only stop')
 parser.add_argument('--output', type=Path, default=ROOT / 'artifacts/ros_closed_loop.json')
 args = parser.parse_args()
+if not np.isfinite(args.walk_speed):
+    parser.error('--walk-speed must be finite')
 rclpy.init()
 sim_node = rclpy.create_node('dex_sim_validation')
 simulator = RobotSimulator(ROOT / 'xSIM_MUJOCO-main/resources/dex_v3/urdf/dex_v3.xml', sim_node,
@@ -46,6 +49,7 @@ spin.start()
 simulation = threading.Thread(target=simulator.start)
 heights = [float(simulator.data.qpos[2])]
 initial_position = simulator.data.qpos[:3].copy()
+phase_start_x = {'stand': float(initial_position[0])}
 states = []
 fault_injected = False
 validation_error = None
@@ -53,6 +57,8 @@ interface = controller.robot_interface
 queues = {'leg': interface.queue_leg_motor_state, 'arm': interface.queue_arm_motor_state,
           'waist': interface.queue_waist_motor_state, 'imu': interface.queue_imu_xsens}
 feedback_ages = dict.fromkeys(queues)
+walk_start = args.duration / 3
+walk_end = args.duration * 2 / 3
 try:
     # Paused physics still refreshes sensor stamps; hold the pose until ZERO commands arrive.
     simulator.paused = True
@@ -92,7 +98,14 @@ try:
         t = float(simulator.data.time)
         if t >= 0.5:
             controller.control_flag.fsm_state_command = 'gotoWALKAMP'
-        controller.control_flag.x_speed_command = 0.4 if args.duration/3 <= t < args.duration*2/3 else 0.0
+        if t < walk_start:
+            phase = 'stand'
+        elif t < walk_end:
+            phase = 'walk'
+        else:
+            phase = 'stop'
+        phase_start_x.setdefault(phase, float(simulator.data.qpos[0]))
+        controller.control_flag.x_speed_command = args.walk_speed if phase == 'walk' else 0.0
         if args.fault and t >= 1.0 and not fault_injected:
             fault_injected = True
             if args.fault == 'feedback':
@@ -119,11 +132,17 @@ finally:
     spin.join(timeout=2)
     sim_node.destroy_node()
     rclpy.shutdown()
+phase_boundaries = [*phase_start_x.values(), float(simulator.data.qpos[0])]
+phase_displacement = {
+    phase: end_x - start_x
+    for phase, start_x, end_x in zip(phase_start_x, phase_boundaries, phase_boundaries[1:])
+}
 report = {'policy': str(args.policy) if args.policy else 'configured default ONNX', 'simulation_seconds': float(simulator.data.time), 'min_pelvis_height': min(heights),
           'states': sorted(set(states)), 'controller_error': controller.control_error,
           'validation_error': validation_error, 'startup_feedback_age_seconds': feedback_ages,
           'initial_position': initial_position.tolist(), 'final_position': simulator.data.qpos[:3].tolist(),
           'forward_displacement': float(simulator.data.qpos[0] - initial_position[0]),
+          'walk_speed_mps': args.walk_speed, 'phase_forward_displacement_m': phase_displacement,
           'simulator_error': simulator.simulation_error, 'external_support': args.band,
           'collapsed': min(heights) < 0.5,
           'ros_feedback_groups': sorted(controller.robot_interface.last_received),

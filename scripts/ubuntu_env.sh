@@ -13,6 +13,7 @@ fi
 export PYTHONNOUSERSITE=1
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONUNBUFFERED=1
-# Training-only checkout: the ROS workspace (ros_ws/install) is no longer part of this tree.
+# Resolve both local packages before any editable installs from another checkout.
+export PYTHONPATH="$project_root/TienKung-Lab:$project_root/TienKung-Lab/rsl_rl${PYTHONPATH:+:$PYTHONPATH}"
 cd "$project_root"
 exec "$@"

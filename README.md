@@ -31,7 +31,7 @@
 > - **walk**：当前 3300 导出模型及增益（膝 KP 330 / 肩 pitch KD 5）已进行独立 MuJoCo Sim2Sim 和 ROS2 闭环仿真，2026-10-29 结果见[🤖 ROS2 + MuJoCo 闭环](#-ros2--mujoco-闭环)；历史数据仍随包供对照。
 > - **真机 walk**：天工行者 Dex（tg3.0 evt2 / robot_type 4）已完成真机地面行走测试，测试结果与设计相符、测试项目均通过；本次部署使用 x86_64 本体板、Ubuntu 24.04 和 ROS 2 Jazzy。后续反馈大步行走时手腕甩动；新增的六轴保持逻辑已做仿真验证，尚未进行真机复验。真机测试的速度、时长等详细数据尚未记录在本 README 中。
 > - **run**：包内保留 4096 环境训练的 `model_3500.pt` 和导出策略；尚未对跑步步态质量做验收，包内 run 示例用于检查仿真通路。
-> - 若需要 run 的**训练 / 策略回放 / 独立 Sim2Sim** 这三条通路，参照 walk 的流程照做即可（把 `--task=dex_walk` 换成 `--task=dex_run`）。但 **ROS2 闭环与部署侧不接 `--task`**（`scripts/ros_closed_loop.py` 只有 `--duration` / `--policy` / `--band` / `--fault` / `--output`），仍固定加载 `walk_amp` 配置；run 要上闭环需另做部署侧适配。
+> - 若需要 run 的**训练 / 策略回放 / 独立 Sim2Sim** 这三条通路，参照 walk 的流程照做即可（把 `--task=dex_walk` 换成 `--task=dex_run`）。ROS2 闭环与部署侧固定加载 `walk_amp` 配置。run 要上闭环需另做部署侧适配。
 
 ### ✨ 核心特性
 
@@ -94,16 +94,18 @@
 
 > ⚠️ 版本以 `scripts/ubuntu_env.sh` 激活后的环境为准。**直接调用 `env_isaaclab/bin/python` 会绕过 `activate.d` 钩子**，此时读到的是 conda 环境自带的另一套依赖（torch 2.12 / mujoco 3.9），与本表不符。
 
-`scripts/ubuntu_env.sh` 是**训练侧**统一入口：激活 `env_isaaclab`、关闭用户站点包与字节码、切到包根目录后执行传入命令。它只影响本次进程，不安装依赖、不重绑 editable。
+`scripts/ubuntu_env.sh` 激活 `env_isaaclab`，将当前仓库的 `TienKung-Lab` 和 `TienKung-Lab/rsl_rl` 放到 `PYTHONPATH` 最前面，再切到包根执行命令。环境激活已有的 Isaac Sim 路径会保留。即使 conda 环境里有旧仓库的 editable 安装，`ubuntu_train.sh` 也会从当前仓库加载训练代码、资产与训练器。
 
 ```bash
-# 自检
+# 检查 Isaac 环境中的依赖版本以及训练包的实际来源
 bash scripts/ubuntu_env.sh python -c "import torch, mujoco, onnxruntime; print(torch.__version__, mujoco.__version__)"
+bash scripts/ubuntu_env.sh python -c \
+  "import importlib.util as u; [print(m, u.find_spec(m).origin) for m in ('legged_lab','rsl_rl','rsl_rl.runners')]"
 ```
 
 ### 🆕 全新环境（从零开始）
 
-上文是「复用既有环境」的推荐路径。若拿到的是**全新环境**（新机器、新目录，或环境里从未装过本包的本地包），训练侧还有两个本地包必须 editable 安装，否则 `import legged_lab` / `import rsl_rl` 直接失败：
+先按上表准备包含 Isaac Sim 和 Isaac Lab 的 `env_isaaclab`。使用本仓库启动脚本即可训练。若要在启动脚本之外直接用 Python 导入这两个本地包，可做 editable 安装：
 
 ```bash
 # 在包根目录执行；解释器需已装好 Isaac Lab，建议套 scripts/ubuntu_env.sh
@@ -115,18 +117,16 @@ bash scripts/ubuntu_env.sh python -m pip install --no-deps -e TienKung-Lab/rsl_r
 >
 > 用 `--no-deps`：这两步只做**本地绑定**，依赖全部由 Isaac Lab 环境提供，无需 pip 再解析一遍。不加 `--no-deps` 时 pip 会读取 `TienKung-Lab/setup.py` 的 `install_requires`（`IsaacLab`、`pynput`、`mujoco==3.3.2`、`matplotlib`），其中 `IsaacLab` 在 PyPI 上可能匹配到无关同名包而污染环境，或解析失败直接中断安装。`--no-deps` 写在 `-e` 之前或之后均可。
 
-装完确认绑定来源指向**本包**而非别处同名目录：
+直接运行 Python 时，可在激活环境后检查 editable 绑定的路径：
 
 ```bash
-bash scripts/ubuntu_env.sh python -c \
-  "import importlib.util as u; [print(m, u.find_spec(m).origin) for m in ('legged_lab','rsl_rl')]"
+python -c \
+  "import importlib.util as u; [print(m, u.find_spec(m).origin) for m in ('legged_lab','rsl_rl','rsl_rl.runners')]"
 ```
 
-> ⚠️ **目录改名或搬移后必须重绑。** editable 安装会把**绝对路径**写进环境的 `.pth` 与 finder 文件；此后一旦把包目录改名（例：把带日期后缀的目录名改成 `Dex-RL`）、搬到其它路径或更换用户名，这两个模块就指向已不存在的旧路径，训练入口在导入阶段即失败（实测 `ModuleNotFoundError: No module named 'legged_lab'`）。此时重跑上面两条安装命令即可恢复。
->
-> ⚠️ **同机只保留一份被绑定的拷贝。** `import legged_lab` 永远来自最近一次 `pip install -e` 绑定的那份目录。若同机并存多份（例如同机还留着一份旧备份），在**未绑定**的那份里跑训练会静默加载另一份的代码且不报错；按需重绑，或只保留一份。
+editable 安装记录绝对路径。搬移仓库后，若仍要直接使用 Python，请从新目录重新执行安装命令。
 
-ROS2 闭环的环境组合不同（需同时激活 conda 与 Humble），**不能**只靠 `ubuntu_env.sh` 启动，见下文「ROS2 + MuJoCo 闭环」。
+ROS2 闭环还需要加载 Humble 和已构建的工作区，见下文「ROS2 + MuJoCo 闭环」。
 
 依赖清单：`requirements-humble.txt`（ROS / 部署侧）与 `Deploy_Tienkung/requirements_22.txt`（部署运行侧）。两者的版本钉扎一致性由 `tests/test_training_entry.py` 中的 `test_ubuntu_deployment_pins_match_the_verified_base_environment` 守护。
 
@@ -206,7 +206,7 @@ bash scripts/ubuntu_train.sh --task=dex_walk --num_envs=4096 --headless \
 
 # 短冒烟：先用 64 环境、2 迭代确认环境与入口
 bash scripts/ubuntu_train.sh --task=dex_walk --num_envs=64 --max_iterations=2 --headless \
-    --logger=tensorboard --run_name=smoke
+    --resume=False --logger=tensorboard --run_name=smoke
 
 # 奔跑训练：从行走检查点热启动（只迁移 actor/critic/std，AMP 判别器从头学）
 bash scripts/ubuntu_train.sh --task=dex_run --num_envs=4096 --max_iterations=101 --headless \
@@ -299,9 +299,8 @@ ROS 仿真器还保留了零增益特殊处理：这 6 轴收到未超时的 `KP
 ## 🎮 策略回放（play）
 
 ```bash
-cd TienKung-Lab
-python legged_lab/scripts/play.py --task=dex_walk --num_envs=1 \
-    --load_run=2026-10-15_19-52-21_v4_walk_4096_20000 --checkpoint=model_3300.pt
+bash scripts/ubuntu_env.sh bash -c 'cd TienKung-Lab && exec python legged_lab/scripts/play.py "$@"' bash \
+    --task=dex_walk --num_envs=1 --load_run=2026-10-15_19-52-21_v4_walk_4096_20000 --checkpoint=model_3300.pt
 ```
 
 - 需要图形显示（默认非 `--headless`）。`play.py` 会同时把策略导出为 `exported/policy.pt` 与 `exported/policy.onnx`，**会覆盖该 run 目录下已有的导出文件**。这两个文件与部署侧 `Deploy_Tienkung/policy/walk_amp/model/` 下的同名文件是**两份独立文件（非软链接）**，play 只覆盖 run 目录里那一份。
@@ -333,13 +332,13 @@ python legged_lab/scripts/play.py --task=dex_walk --num_envs=1 \
 > 否则 `torch.jit.load` 会报 `PytorchStreamReader failed locating file constants.pkl`。要先用 `play.py` 导出。
 
 ```bash
-# 行走：恒定 0.4 m/s，30 秒，带 MuJoCo 视窗与键盘遥操作
-python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_walk \
-    --policy Deploy_Tienkung/policy/walk_amp/model/policy.onnx --duration 30 --command 0.4 0 0 \
+# 行走：恒定 0.8 m/s，30 秒，带 MuJoCo 视窗与键盘遥操作
+bash scripts/ubuntu_env.sh python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_walk \
+    --policy Deploy_Tienkung/policy/walk_amp/model/policy.onnx --duration 30 --command 0.8 0 0 \
     --output artifacts/my_walk.json
 
 # 无头批量验证
-python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_walk --headless \
+bash scripts/ubuntu_env.sh python TienKung-Lab/legged_lab/scripts/sim2sim.py --task dex_walk --headless \
     --duration 10 --command 0.8 0 0 --output artifacts/my_walk_headless.json
 
 # 奔跑：必须显式提供与之匹配的 run 策略，不能用 walk 策略代替。
@@ -411,19 +410,19 @@ source install/setup.bash
 
 > 📌 该脚本内部固定 `headless=True`，**没有任何 MuJoCo 窗口**，产出的是 JSON 报告——想看界面要走下面的「启动仿真栈」。
 
-环境需要**同时**具备 conda 与 Humble，故不能用 `ubuntu_env.sh` 代劳：
+先加载 Humble 和已构建的 ROS 工作区，再用 `ubuntu_env.sh` 选择 conda 环境并屏蔽用户站点包：
 
 ```bash
-source ~/miniconda3/etc/profile.d/conda.sh && conda activate env_isaaclab
 source /opt/ros/humble/setup.bash
 source install/setup.bash
-python scripts/ros_closed_loop.py --duration 15 \
+bash scripts/ubuntu_env.sh python scripts/ros_closed_loop.py --duration 15 --walk-speed 0.8 \
     --output artifacts/ros_closed_loop.json
 ```
 
 | 参数 | 说明 |
 | --- | --- |
 | `--duration` | 仿真时长（秒），默认 12 |
+| `--walk-speed` | 中间三分之一的前向指令（m/s），默认 0.4。前、后两段为零指令 |
 | `--policy` | 显式候选 ONNX；不覆盖默认模型 |
 | `--band` | 带外部支撑的**仅传输**测试，不是步态验收 |
 | `--fault feedback` / `--fault inference` | 注入一处故障，验证仅阻尼停止（须收到 `kp=0` / `kd=1`） |
@@ -434,11 +433,13 @@ python scripts/ros_closed_loop.py --duration 15 \
 - **常规**：`validation_error` / `controller_error` / `simulator_error` / `collapsed` 任一非空，或状态序列中不含 `WALKAMP` → 退出码 1
 - **故障**：须同时满足「无 `validation_error`」且「有 `controller_error`」且「`damping_stop_received` 为真」
 
+2026-11-25 在 Ubuntu 22.04 / Humble / MuJoCo 3.3.2 上使用包内 3300 ONNX 和七胶囊脚底模型，无支撑运行 `--duration 15 --walk-speed 0.8`。三段指令为 0 → 0.8 → 0 m/s，前向位移依次为 0.17、3.23、0.40 m，最低骨盆高度 0.948 m，收到 29 路电机命令，全程未倒。在 MuJoCo 3.9.0 的一次复跑中，返回零指令后最后两秒内，骨盆在平面内距该段起点最远 2.5 mm。
+
 2026-10-29 仿真记录（包内 3300 导出 ONNX，膝 KP 330 / 肩 pitch KD 5；该次早于新增末端关节保持逻辑）：
 
 | 用例 | 退出码 | 仿真秒 | 最低骨盆 | 前向位移 | 关键字段 |
 | --- | --- | --- | --- | --- | --- |
-| 无支撑 `--duration 15` | **0** | 15.0025 | 0.95294 | 0.1612 m | `states=[WALKAMP,ZERO]`、`collapsed=false`、29 路命令 |
+| 无支撑 `--duration 15`，中段 0.4 m/s | **0** | 15.0025 | 0.95294 | 0.1612 m | `states=[WALKAMP,ZERO]`、`collapsed=false`、29 路命令 |
 
 > 原始报告：`artifacts/ros_closed_loop_gain330_20261029.json`，表中数值取自其 `min_pelvis_height` / `forward_displacement`；`controller_error` / `validation_error` / `simulator_error` 均为 `null`，启动期四组反馈新鲜度约 0.0034 秒。同增益下的独立 Sim2Sim（0.8 m/s、10 s）前向 7.63 m、最低骨盆 0.9640，见 `artifacts/walk08_gain330_20261029.json`。
 
@@ -446,7 +447,7 @@ python scripts/ros_closed_loop.py --duration 15 \
 
 历史闭环及故障注入记录使用修改前的增益，见 [ROS 闭环说明](docs/ROS_CLOSED_LOOP_GAP.md)。这些结果用于历史对照，不代表当前配置的全部工况已经重新验证。
 
-闭环通过未倒地和状态切换判据不等于速度跟踪合格；低速跟踪仍需进一步验证。
+验证站立、起步与停车时，使用 `--walk-speed 0.8`，并查看报告的 `phase_forward_displacement_m` 对照三段前向位移。当前策略在 0.3–0.4 m/s 指令下偏向站立。
 
 ### 把闭环切到某个 checkpoint 的策略
 
