@@ -9,7 +9,7 @@ from legged_lab.assets import ISAAC_ASSET_DIR
 DEX_V3_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
         fix_base=False,
-        replace_cylinders_with_capsules=False,
+        replace_cylinders_with_capsules=True,
         asset_path=f"{ISAAC_ASSET_DIR}/Tienkung_Dex/urdf/tiangong3_locomotion.urdf",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(

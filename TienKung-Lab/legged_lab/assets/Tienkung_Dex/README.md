@@ -61,3 +61,5 @@
 ## 许可证
 
 本目录未包含独立的许可证正文；据上游说明该资产采用 OpenAtom Open Hardware License 1.0，使用和分发前请核对相应完整许可文本。本仓库整体与各子包的许可证见包根 README 的「许可证」一节及 `TienKung-Lab/LICENSE`、`Deploy_Tienkung/LICENSE.txt`、`xSIM_MUJOCO-main/LICENSE`。
+
+新训练的 walk/run 配置启用圆柱转胶囊，底部每脚 7 个 URDF 圆柱直段在 Isaac Lab 中成为胶囊。MuJoCo 的 `dex_v3.xml` 由 `scripts/sync_dex.py` 输出同样的原生胶囊。

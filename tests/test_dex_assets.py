@@ -38,8 +38,8 @@ def test_migration_preserves_training_parameters():
     before = json.loads((ROOT / 'artifacts/asset_cleanup_before.json').read_text())
     for task in ['walk', 'run']:
         path = ASSETS / f'Tienkung_Dex/{task}.py'
-        content = path.read_bytes().replace(b'replace_cylinders_with_capsules=False',
-                                            b'replace_cylinders_with_capsules=True')
+        content = path.read_bytes()
+        assert b'replace_cylinders_with_capsules=True' in content
         old_height = b'0.97' if task == 'walk' else b'1.0'
         content = content.replace(b'pos=(0.0, 0.0, 0.995)', b'pos=(0.0, 0.0, '+old_height+b')')
         if task == 'run':

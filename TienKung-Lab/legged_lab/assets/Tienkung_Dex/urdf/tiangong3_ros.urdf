@@ -171,45 +171,45 @@
       </material>
     </visual>
     <collision name="foot_left_front_outer">
-      <origin xyz="0.085 -0.03 -0.046" rpy="0 1.5708 0" />
+      <origin xyz="0.0873131058 -0.041 -0.0427359694" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.06" />
+        <cylinder radius="0.01" length="0.0645" />
       </geometry>
     </collision>
     <collision name="foot_left_front_inner">
-      <origin xyz="0.085 0.03 -0.046" rpy="0 1.5708 0" />
+      <origin xyz="0.0873131058 0.041 -0.0427359694" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.06" />
+        <cylinder radius="0.01" length="0.0645" />
       </geometry>
     </collision>
     <collision name="foot_left_mid_outer">
-      <origin xyz="0.045 -0.02 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0363281335 -0.029 -0.0439739496" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.01" length="0.20" />
+        <cylinder radius="0.01" length="0.2265" />
       </geometry>
     </collision>
     <collision name="foot_left_mid_inner">
-      <origin xyz="0.045 0.02 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0363281335 0.029 -0.0439739496" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.01" length="0.20" />
+        <cylinder radius="0.01" length="0.2265" />
       </geometry>
     </collision>
     <collision name="foot_left_strip_outer">
-      <origin xyz="0.045 -0.01 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0425762918 -0.017 -0.0438222364" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.22" />
+        <cylinder radius="0.01" length="0.239" />
       </geometry>
     </collision>
     <collision name="foot_left_strip_center">
-      <origin xyz="0.045 0 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0458253342 0 -0.0437433455" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.24" />
+        <cylinder radius="0.01" length="0.2435" />
       </geometry>
     </collision>
     <collision name="foot_left_strip_inner">
-      <origin xyz="0.045 0.01 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0425762918 0.017 -0.0438222364" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.22" />
+        <cylinder radius="0.01" length="0.239" />
       </geometry>
     </collision>
   </link>
@@ -369,45 +369,45 @@
       </material>
     </visual>
     <collision name="foot_right_front_outer">
-      <origin xyz="0.085 -0.03 -0.046" rpy="0 1.5708 0" />
+      <origin xyz="0.0873131058 -0.041 -0.0427359694" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.06" />
+        <cylinder radius="0.01" length="0.0645" />
       </geometry>
     </collision>
     <collision name="foot_right_front_inner">
-      <origin xyz="0.085 0.03 -0.046" rpy="0 1.5708 0" />
+      <origin xyz="0.0873131058 0.041 -0.0427359694" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.06" />
+        <cylinder radius="0.01" length="0.0645" />
       </geometry>
     </collision>
     <collision name="foot_right_mid_outer">
-      <origin xyz="0.045 -0.02 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0363281335 -0.029 -0.0439739496" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.01" length="0.20" />
+        <cylinder radius="0.01" length="0.2265" />
       </geometry>
     </collision>
     <collision name="foot_right_mid_inner">
-      <origin xyz="0.045 0.02 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0363281335 0.029 -0.0439739496" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.01" length="0.20" />
+        <cylinder radius="0.01" length="0.2265" />
       </geometry>
     </collision>
     <collision name="foot_right_strip_outer">
-      <origin xyz="0.045 -0.01 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0425762918 -0.017 -0.0438222364" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.22" />
+        <cylinder radius="0.01" length="0.239" />
       </geometry>
     </collision>
     <collision name="foot_right_strip_center">
-      <origin xyz="0.045 0 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0458253342 0 -0.0437433455" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.24" />
+        <cylinder radius="0.01" length="0.2435" />
       </geometry>
     </collision>
     <collision name="foot_right_strip_inner">
-      <origin xyz="0.045 0.01 -0.046" rpy="0 -1.5708 0" />
+      <origin xyz="0.0425762918 0.017 -0.0438222364" rpy="0 1.5465198202 0" />
       <geometry>
-        <cylinder radius="0.012" length="0.22" />
+        <cylinder radius="0.01" length="0.239" />
       </geometry>
     </collision>
   </link>

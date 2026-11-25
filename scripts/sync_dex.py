@@ -1,4 +1,4 @@
-"""Generate the V4 seven-cylinder locomotion model and walk deployment configuration."""
+"""Generate the V4 sole-capsule locomotion model and walk deployment configuration."""
 import ast
 import re
 import struct
@@ -114,6 +114,21 @@ for body in model.findall('.//body'):
         inertial.set('pos', ' '.join(format(v, '.17g') for v in plant.body_ipos[index]))
         inertial.set('quat', ' '.join(format(v, '.17g') for v in plant.body_iquat[index]))
         inertial.set('diaginertia', ' '.join(format(v, '.17g') for v in plant.body_inertia[index]))
+# URDF stores the capsule cores as cylinders. Restore the full precision of
+# the 14 foot shapes before changing their type in the deployed MJCF.
+for side in ('l', 'r'):
+    name = f'ankle_roll_{side}_link'
+    ankle = model.find(f".//body[@name='{name}']")
+    cores = [geom for geom in ankle.findall('geom')
+             if geom.get('name', '').startswith(name + '_collision_')]
+    if len(cores) != 7 or any(geom.get('type') != 'cylinder' for geom in cores):
+        raise ValueError(f'{name} must have seven cylinder cores')
+    for geom in cores:
+        imported = plant.geom(geom.get('name'))
+        geom.set('type', 'capsule')
+        geom.set('pos', ' '.join(format(v, '.17g') for v in imported.pos))
+        geom.set('quat', ' '.join(format(v, '.17g') for v in imported.quat))
+        geom.set('size', ' '.join(format(v, '.17g') for v in imported.size[:2]))
 model.find('compiler').set('meshdir', '../meshes')
 for mesh in model.findall('asset/mesh'):
     file = Path(mesh.get('file')).name
@@ -192,4 +207,4 @@ ET.SubElement(sensors, 'framelinvel', name='linear-velocity', objtype='site', ob
 ET.SubElement(sensors, 'magnetometer', name='magnetometer', site='imu')
 ET.indent(model)
 xml.write(xml_path, encoding='unicode')
-print('Synced V4: training 23 joints, ROS 29 joints, seven foot cylinders, 400/100 Hz, height 0.995 m.')
+print('Synced V4: training 23 joints, ROS 29 joints, seven foot capsules per foot, 400/100 Hz, height 0.995 m.')
