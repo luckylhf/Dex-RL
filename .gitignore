@@ -41,6 +41,8 @@ Temporary Items
 # 独立站立的单次运行记录，本地保留但不随包分发
 /artifacts/stand_3300_sim2sim.json
 /artifacts/stand_gain330_20261029.json
+# 一次性资产一致性校验快照（胶囊变更核对），本地保留但不随包分发
+/artifacts/asset_validation_*/
 # 注意：/artifacts/asset_cleanup_before.json 不可忽略——tests/test_dex_assets.py 会读取它
 # 例外：导出产物需随包分发，不忽略
 !/artifacts/exported_policy/
